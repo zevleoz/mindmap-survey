@@ -28,7 +28,7 @@ const LEARNING_DIM_GROUPS: {
     items: [{ key: "思维模式", label: "思维模式" }],
   },
   {
-    title: "自主性与胜任感",
+    title: "自驱力",
     items: [
       { key: "自主性", label: "自主性" },
       { key: "胜任感", label: "胜任感" },
@@ -36,7 +36,7 @@ const LEARNING_DIM_GROUPS: {
     ],
   },
   {
-    title: "学习动机",
+    title: "学习动力",
     items: [
       { key: "深层动机", label: "深层动机" },
       { key: "表层动机", label: "表层动机" },
@@ -44,10 +44,10 @@ const LEARNING_DIM_GROUPS: {
     ],
   },
   {
-    title: "学习方法与调节",
+    title: "学习方法与策略",
     items: [
-      { key: "深层方法", label: "深层学习方法" },
-      { key: "表层方法", label: "表层学习方法" },
+      { key: "深层方法", label: "深层方法" },
+      { key: "表层方法", label: "表层方法" },
       { key: "学习自我调节", label: "学习自我调节" },
     ],
   },
@@ -275,28 +275,76 @@ export function ResultView({ name, scores, onRestart }: ResultViewProps) {
         transition={{ duration: 0.35 }}
       >
         <SectionShell>
-          <div className="mb-4 flex items-center gap-2">
+          <div className="mb-6 flex items-center gap-2">
             <span className="inline-block h-5 w-1 rounded-sm bg-teal-600" />
             <h3 className="text-base font-semibold text-slate-700">学业压力分析</h3>
             <span className="ml-auto text-xs text-slate-500">满分 5 分</span>
           </div>
-          <PressureRadar pressure={scores.pressure ?? {}} showAverage />
-          <div className="mt-4 rounded-2xl bg-teal-50/60 p-5">
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {PRESSURE_DIMENSIONS.map((d) => {
-                const v = (scores.pressure?.[d] as number) ?? 0;
-                return (
-                  <div
-                    key={d}
-                    className="flex items-center justify-between text-sm"
-                  >
-                    <span className="font-medium text-slate-700">{d}</span>
-                    <span className="font-bold tabular-nums text-teal-700">
-                      {v.toFixed(1)} / 5
-                    </span>
-                  </div>
-                );
-              })}
+
+          {/* 桌面端：左列表右雷达图；移动端：上雷达图下列表 */}
+          <div className="flex flex-col items-stretch gap-8 lg:flex-row lg:gap-10">
+            {/* 雷达图（移动端在上、桌面端在右） */}
+            <div className="order-1 lg:order-2 flex-1 overflow-visible">
+              <div className="mx-auto h-[380px] w-full lg:h-[440px] overflow-visible">
+                <PressureRadar pressure={scores.pressure ?? {}} showAverage />
+              </div>
+            </div>
+
+            {/* 左边：维度列表 */}
+            <div className="order-2 lg:order-1 flex-1">
+              <div>
+                {PRESSURE_DIMENSIONS.map((d, i) => {
+                  const v = (scores.pressure?.[d] as number) ?? 0;
+                  return (
+                    <div
+                      key={d}
+                      className={
+                        "flex h-14 items-center justify-between px-2 " +
+                        (i === PRESSURE_DIMENSIONS.length - 1
+                          ? ""
+                          : "border-b border-slate-100")
+                      }
+                    >
+                      <span className="text-base font-medium leading-none text-slate-700">
+                        {d}
+                      </span>
+                      <span className="flex items-center">
+                        <span className="text-lg font-bold leading-none tabular-nums text-teal-600">
+                          {v.toFixed(1)}
+                        </span>
+                        <span className="ml-0.5 text-sm font-normal leading-none text-slate-400">
+                          / 5
+                        </span>
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* 综合压力水平：突出显示 */}
+              <div className="mt-4 flex h-14 items-center justify-between rounded-xl bg-teal-50 px-4">
+                <span className="font-semibold leading-none text-teal-800">
+                  综合压力水平
+                </span>
+                <span className="flex items-center">
+                  <span className="text-xl font-bold leading-none tabular-nums text-teal-700">
+                    {(
+                      Math.round(
+                        (PRESSURE_DIMENSIONS.reduce(
+                          (sum, d) =>
+                            sum + ((scores.pressure?.[d] as number) ?? 0),
+                          0
+                        ) /
+                          PRESSURE_DIMENSIONS.length) *
+                          10
+                      ) / 10
+                    ).toFixed(1)}
+                  </span>
+                  <span className="ml-1 text-sm font-normal leading-none text-slate-400">
+                    / 5
+                  </span>
+                </span>
+              </div>
             </div>
           </div>
         </SectionShell>

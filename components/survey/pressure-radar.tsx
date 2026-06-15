@@ -26,44 +26,56 @@ export function PressureRadar({ pressure, showAverage }: PressureRadarProps) {
   }));
 
   return (
-    <div className="w-full">
-      <ResponsiveContainer width="100%" height={380}>
-        <RadarChart cx="50%" cy="50%" outerRadius="72%" data={data}>
-          <PolarGrid stroke="#CBD5E1" />
+    <div className="h-full w-full overflow-visible">
+      <ResponsiveContainer width="100%" height="100%">
+        <RadarChart
+          cx="50%"
+          cy="50%"
+          outerRadius="58%"
+          margin={{ top: 30, right: 60, bottom: 40, left: 60 }}
+          data={data}
+        >
+          <PolarGrid stroke="#CBD5E1" strokeWidth={1} />
           <PolarAngleAxis
             dataKey="dimension"
-            tick={{ fill: "#475569", fontSize: 12 }}
+            tick={{ fill: "#334155", fontSize: 12 }}
           />
           <PolarRadiusAxis
             angle={90}
             domain={[0, 5]}
-            tick={{ fill: "#94A3B8", fontSize: 10 }}
+            tick={false}
             axisLine={false}
           />
-          {/* 学生得分（青绿色 teal-600） */}
+          {/* 学生得分（青绿色 teal-600）：线条加粗、填充加深 */}
           <Radar
             name="学生得分"
             dataKey="value"
             stroke="#0D9488"
             fill="#0D9488"
-            fillOpacity={0.3}
-            strokeWidth={2}
+            fillOpacity={0.32}
+            strokeWidth={2.5}
           />
           {/* 平均水平 3 分（灰色虚线多边形） */}
           {showAverage !== false && (
             <Radar
               name="平均水平 (3 分)"
               dataKey="average"
-              stroke="#94A3B8"
-              strokeDasharray="4 4"
-              fill="#94A3B8"
+              stroke="#64748B"
+              strokeDasharray="5 5"
+              fill="#64748B"
               fillOpacity={0.08}
               strokeWidth={2}
             />
           )}
           <Legend
             iconType="circle"
-            wrapperStyle={{ fontSize: 12, color: "#475569" }}
+            wrapperStyle={{
+              display: "flex",
+              justifyContent: "center",
+              gap: "1.5rem",
+              fontSize: "13px",
+              color: "#334155",
+            }}
           />
         </RadarChart>
       </ResponsiveContainer>

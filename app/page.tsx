@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { School, User, Users } from "lucide-react";
+import { ChevronDown, School, User, Users } from "lucide-react";
 
 import { ResultView } from "@/components/survey/result-view";
 import { ScoreButtons } from "@/components/survey/score-buttons";
@@ -149,7 +149,7 @@ function TopProgress({
   color: "amber" | "teal";
 }) {
   return (
-    <div className="w-full border-b border-slate-100/80 bg-white">
+    <div className="sticky inset-x-0 top-0 z-30 w-full border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-white/80">
       <div className="mx-auto max-w-3xl px-3 py-3 sm:px-4">
         <div className="mb-2 flex items-center justify-between text-sm">
           <span className="font-medium text-slate-700">
@@ -580,11 +580,12 @@ export default function SurveyPage() {
                   <label htmlFor="gender" className="text-sm font-medium text-slate-700">性别</label>
                   <div className="relative">
                     <Users className="pointer-events-none absolute left-3.5 top-1/2 z-10 size-4 -translate-y-1/2 text-amber-700/70" />
+                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 z-10 size-4 -translate-y-1/2 text-slate-500" />
                     <select
                       id="gender"
                       value={gender}
                       onChange={(e) => setGender(e.target.value)}
-                      className="h-12 w-full appearance-none rounded-xl border border-slate-200 bg-amber-50/40 pl-10 pr-4 text-base text-slate-800 outline-none focus:border-amber-700 focus:ring-2 focus:ring-amber-700/20"
+                      className="h-12 w-full appearance-none rounded-xl border border-slate-200 bg-amber-50/40 pl-10 pr-10 text-base text-slate-800 outline-none focus:border-amber-700 focus:ring-2 focus:ring-amber-700/20"
                     >
                       <option value="">请选择性别</option>
                       {GENDER_OPTIONS.map((g) => (
@@ -671,7 +672,7 @@ export default function SurveyPage() {
             </p>
             <div className="mt-5 rounded-xl bg-teal-50/70 px-4 py-3 text-sm text-teal-900">
               <div className="font-medium">评分标准</div>
-              <div className="mt-1 grid grid-cols-5 gap-2 text-xs opacity-90">
+              <div className="mt-2 space-y-1 text-xs opacity-90">
                 <div>1 · 完全没有</div>
                 <div>2 · 很少</div>
                 <div>3 · 有时</div>
@@ -799,9 +800,10 @@ export default function SurveyPage() {
           }
         }}
         onNext={handleNextStressPage}
-        nextLabel={isLastStressPage ? "提交并查看结果" : "下一页"}
+        nextLabel={isLastStressPage ? "提交" : "下一页"}
         disabled={!pageComplete(currentPressurePage, stressAnswers)}
         submitting={submitting}
+        variant="teal"
         info={`本组已答 ${currentPressurePage.filter((id) => stressAnswers[String(id)] !== undefined).length}/${currentPressurePage.length} · 总计 ${answeredStressCount}/${TOTAL_PRESSURE_QUESTIONS}`}
       />
     </PageLayout>
