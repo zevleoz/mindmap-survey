@@ -97,6 +97,8 @@ export default function AdminPage() {
   const [records, setRecords] = useState<StudentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [dbFallback, setDbFallback] = useState(false);
+  const [dbFallbackMessage, setDbFallbackMessage] = useState("");
   const [authed, setAuthed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     try {
@@ -122,6 +124,13 @@ export default function AdminPage() {
           setRecords(data.students);
         } else {
           setRecords([]);
+        }
+        if (data?._dbFallback === true) {
+          setDbFallback(true);
+          setDbFallbackMessage(data._message || "数据库未配置");
+        } else {
+          setDbFallback(false);
+          setDbFallbackMessage("");
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "加载失败");
@@ -321,6 +330,22 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FBF7F0] to-white">
       <main className="mx-auto max-w-[1400px] space-y-6 px-5 py-8">
+        {dbFallback && (
+          <div className="rounded-[20px] border border-amber-200 bg-amber-50 p-5 text-sm leading-relaxed text-amber-900">
+            <div className="font-semibold text-amber-900">
+              ⚠️ 数据库未配置（当前为降级模式）
+            </div>
+            <p className="mt-2">{dbFallbackMessage}</p>
+            <p className="mt-2 text-amber-800">
+              快速步骤：① 在 Vercel 项目设置 → Environment Variables 添加
+              <code className="mx-1 rounded bg-white px-1.5 py-0.5 font-mono text-amber-900">DATABASE_URL</code>
+              （推荐使用 Vercel Postgres / Neon / Supabase）；
+              ② 在 Vercel CLI 或本地执行
+              <code className="mx-1 rounded bg-white px-1.5 py-0.5 font-mono text-amber-900">prisma migrate deploy</code>
+              ；③ 重新部署。
+            </p>
+          </div>
+        )}
         <div className="flex flex-col gap-4 rounded-[20px] bg-white p-6 shadow-[0_2px_8px_rgba(184,115,51,0.08)] sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-amber-800">
