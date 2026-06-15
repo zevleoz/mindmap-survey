@@ -284,7 +284,7 @@ export default function AdminPage() {
       if (!templateEl) throw new Error("PDF 模板未找到");
 
       const canvas = await html2canvas(templateEl as HTMLElement, {
-        scale: 2,
+        scale: 4,
         useCORS: true,
         backgroundColor: "#ffffff",
         logging: false,
@@ -293,7 +293,7 @@ export default function AdminPage() {
       root.unmount();
       document.body.removeChild(container);
 
-      const imgData = canvas.toDataURL("image/jpeg", 0.95);
+      const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "pt",

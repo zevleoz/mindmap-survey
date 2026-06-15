@@ -155,7 +155,7 @@ export function ResultView({ name, scores, onRestart }: ResultViewProps) {
       }
 
       const canvas = await html2canvas(templateEl as HTMLElement, {
-        scale: 2, // 高清
+        scale: 4, // 超高清 4x（比 3x 更清晰，尤其提升文字和水印）
         useCORS: true,
         backgroundColor: "#ffffff",
         logging: false,
@@ -166,7 +166,8 @@ export function ResultView({ name, scores, onRestart }: ResultViewProps) {
       document.body.removeChild(container);
 
       // 6. 用 jsPDF 生成 PDF（A4 纵向）
-      const imgData = canvas.toDataURL("image/jpeg", 0.95);
+      // 用 PNG 而非 JPEG：无损，避免背景水印的文字因为 JPEG 压缩而模糊
+      const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "pt",

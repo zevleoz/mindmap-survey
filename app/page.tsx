@@ -55,7 +55,7 @@ function IconInput({
 
 function PageLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-[#FBF7F0] to-white">
+    <div className="relative min-h-screen overflow-x-hidden bg-gradient-to-b from-[#FBF7F0] to-white">
       {/* 品牌水印：平铺 fill 整页，opacity 0.08，不阻挡点击 */}
       <div
         aria-hidden="true"
@@ -162,7 +162,7 @@ function TopProgress({
   color: "amber" | "teal";
 }) {
   return (
-    <div className="sticky inset-x-0 top-0 z-30 w-full border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-white/80">
+    <div className="sticky inset-x-0 top-0 z-50 w-full border-b border-slate-200 bg-white/80 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-white/60">
       <div className="mx-auto max-w-3xl px-3 py-3 sm:px-4">
         <div className="mb-2 flex items-center justify-between text-sm">
           <span className="font-medium text-slate-700">
@@ -551,14 +551,6 @@ export default function SurveyPage() {
     return (
       <PageLayout>
         <main className="mx-auto flex min-h-screen max-w-2xl w-full flex-col px-5 py-10 sm:px-8">
-          {/* 顶部品牌 logo */}
-          <div className="mb-6 flex items-center justify-center">
-            <img
-              src="/branding/logo_red.png"
-              alt="凭远教育"
-              className="h-10 w-auto object-contain sm:h-12"
-            />
-          </div>
           <div className="rounded-[24px] bg-white p-6 shadow-[0_2px_12px_rgba(184,115,51,0.08)] sm:p-8">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-800">
               <span className="size-1.5 rounded-full bg-amber-700" />
@@ -585,7 +577,17 @@ export default function SurveyPage() {
               </div>
             </div>
           </div>
-          <div className="mt-auto space-y-3 pt-10">
+
+          {/* 品牌 Logo：放在描述区域和按钮之间 */}
+          <div className="flex flex-col items-center justify-center gap-3 py-8 sm:py-10">
+            <img
+              src="/branding/logo_color.png"
+              alt="凭远教育"
+              className="h-20 w-auto object-contain sm:h-28"
+            />
+          </div>
+
+          <div className="mt-auto space-y-3">
             <button
               type="button"
               onClick={(e) => {
@@ -722,9 +724,9 @@ export default function SurveyPage() {
   if (step === "submitted") {
     return (
       <PageLayout>
-        <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col items-center justify-center px-5 py-16 sm:px-8">
-          <div className="w-full rounded-[24px] bg-white p-8 text-center shadow-[0_2px_12px_rgba(184,115,51,0.08)] sm:p-10">
-            <div className="mx-auto flex size-20 items-center justify-center rounded-full bg-amber-50">
+        <main className="mx-auto flex min-h-screen w-full max-w-2xl items-center justify-center px-5 py-12 sm:px-8">
+          <div className="w-full rounded-[24px] bg-white p-8 text-center shadow-[0_2px_12px_rgba(184,115,51,0.08)] sm:p-12">
+            <div className="mx-auto flex size-24 items-center justify-center rounded-full bg-amber-50 sm:size-28">
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -732,41 +734,44 @@ export default function SurveyPage() {
                 strokeWidth={2.2}
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="size-10"
+                className="size-12 sm:size-14"
               >
                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                 <polyline points="22 4 12 14.01 9 11.01" />
               </svg>
             </div>
-            <h1 className="mt-6 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+            <h1 className="mt-8 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
               测评完成！
             </h1>
-            <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-slate-600">
+            <p className="mx-auto mt-4 max-w-md text-base leading-relaxed text-slate-600 sm:text-lg">
               你的学习力测评报告已生成。
             </p>
-            <div className="mx-auto mt-4 w-full max-w-md rounded-xl border border-slate-100 bg-slate-50/70 p-4 text-left text-xs leading-relaxed text-slate-600">
-              <div className="font-semibold text-slate-800">
-                请联系你的凭远教育顾问解锁完整报告
-              </div>
-              <div className="mt-2">
-                顾问会为你解读报告，结合你的目标与学习路径给出专业建议。
-              </div>
-              <div className="mt-3 border-t border-slate-100 pt-3 text-[11px] text-slate-500">
-                姓名：{name || "—"}
-                {school ? <>　·　学校：{school}</> : null}
-              </div>
+            <div className="mx-auto mt-6 w-full max-w-md rounded-2xl border border-amber-100 bg-amber-50/60 p-5 text-base leading-relaxed text-amber-900 sm:p-6">
+              请联系你的凭远教育顾问解锁完整报告。
             </div>
 
-            {/* 底部品牌 logo 与联系方式 */}
-            <div className="mt-10 flex flex-col items-center gap-3">
+            {/* 公司 Logo */}
+            <div className="mt-10 flex flex-col items-center gap-3 sm:mt-12">
               <img
                 src="/branding/logo_color.png"
                 alt="凭远教育"
-                className="h-10 w-auto object-contain"
+                className="h-14 w-auto object-contain sm:h-16"
               />
-              <div className="text-xs text-slate-500">
-                凭远教育 APP-ARK　·　用心陪伴你的留学之路
-              </div>
+            </div>
+
+            {/* 重新测评按钮 */}
+            <div className="mx-auto mt-10 max-w-md sm:mt-12">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleRestart();
+                }}
+                className="h-14 w-full rounded-2xl border border-slate-200 bg-white text-base font-medium text-slate-700 shadow-sm transition-all hover:border-slate-300 hover:text-slate-900 hover:shadow active:scale-[0.98] sm:h-16"
+              >
+                重新测评
+              </button>
             </div>
           </div>
         </main>

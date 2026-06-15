@@ -444,11 +444,12 @@ function SectionTitle({
   hint?: string;
   color: string;
 }) {
+  // 竖线与标题文字顶部对齐：alignItems: "flex-start"
   return (
     <View
       style={{
         flexDirection: "row",
-        alignItems: "center",
+        alignItems: "flex-start",
         marginTop: 8,
         marginBottom: 6,
       }}
@@ -456,9 +457,10 @@ function SectionTitle({
       <View
         style={{
           width: 3,
-          height: 10,
+          height: 11,
           backgroundColor: color,
           marginRight: 6,
+          marginTop: 1,
         }}
       />
       <Text
@@ -467,6 +469,7 @@ function SectionTitle({
           fontSize: 11,
           fontWeight: "bold",
           color: COLOR_SLATE_DARK,
+          lineHeight: 1.15,
         }}
       >
         {title}
@@ -478,6 +481,7 @@ function SectionTitle({
             fontSize: 8,
             color: COLOR_SLATE,
             marginLeft: 8,
+            paddingTop: 2,
           }}
         >
           {hint}

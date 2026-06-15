@@ -113,7 +113,7 @@ function RingSvg({
 function RadarSvg({ values, size = 260 }: { values: number[]; size?: number }) {
   const cx = size / 2;
   const cy = size / 2;
-  const radius = size / 2 - 55; // 多边形主体收缩，留 55px 给外侧标签
+  const radius = size / 2 - 70; // 主体更紧凑，留更多空间给标签
   const num = 5;
   const maxValue = 5;
 
@@ -173,7 +173,7 @@ function RadarSvg({ values, size = 260 }: { values: number[]; size?: number }) {
   //  i=3: 同伴竞争（左下）
   //  i=4: 自我要求（左）
   const labels = PRESSURE_DIMS;
-  const labelRadius = radius + 28; // 标签离多边形外沿 28px，远离主体
+  const labelRadius = radius + 20; // 标签紧挨着五边形外沿，完全在 SVG 范围内
   const labelPositions = labels.map((lbl, i) => {
     const angle = -Math.PI / 2 + (i * 2 * Math.PI) / num;
     const x = cx + labelRadius * Math.cos(angle);
@@ -433,25 +433,29 @@ function SectionTitle({
   hint?: string;
   color: string;
 }) {
-  // 标题字号 13px（约 10pt），竖线高度 14px 与文字匹配，用 flex items-center 保证垂直居中
+  // 竖线 bar 与标题文字顶部对齐：
+  // 用 flex-start + 显式 marginTop = 0，确保竖线与文字第一行顶部平齐
   return (
     <div
       style={{
         display: "flex",
-        alignItems: "center",
+        alignItems: "flex-start",
         justifyContent: "space-between",
         marginTop: 14,
         marginBottom: 8,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center" }}>
+      <div style={{ display: "flex", alignItems: "flex-start" }}>
+        {/* 竖线：高度与标题文字高度匹配（13px * 1.2 = 15.6px，取整 15px） */}
         <span
           style={{
-            width: 3,
-            height: 14,
+            width: 4,
+            height: 13,
             background: color,
             marginRight: 8,
-            borderRadius: 1.5,
+            borderRadius: 2,
+            marginTop: 1,
+            flexShrink: 0,
           }}
         />
         <span
@@ -459,7 +463,8 @@ function SectionTitle({
             fontSize: 13,
             fontWeight: 700,
             color: COLOR_SLATE_DARK,
-            lineHeight: 1,
+            lineHeight: 1.2,
+            letterSpacing: 0.5,
           }}
         >
           {title}
@@ -470,7 +475,8 @@ function SectionTitle({
               fontSize: 10,
               color: COLOR_SLATE,
               marginLeft: 10,
-              lineHeight: 1,
+              lineHeight: 1.2,
+              paddingTop: 3,
             }}
           >
             {hint}
@@ -557,10 +563,11 @@ export function PdfTemplate({ name, scores, dateStr }: PdfTemplateProps) {
           pointerEvents: "none",
           userSelect: "none",
           backgroundImage: "url('/branding/watermark.jpg')",
-          backgroundSize: "260px 260px",
+          backgroundSize: "300px 300px",
           backgroundRepeat: "repeat",
           backgroundPosition: "0 0",
-          opacity: 0.08,
+          opacity: 0.12,
+          imageRendering: "-webkit-optimize-contrast",
         }}
       />
       {/* ========== 顶部：标题 + 姓名日期 ========== */}
