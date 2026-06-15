@@ -1,10 +1,13 @@
+// SQLite schema: 开箱即用，无需外部数据库
+// 如需切换回 PostgreSQL，把 datasource.db 改为 provider = "postgresql" 并设置 DATABASE_URL
+
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 model Student {

@@ -207,6 +207,15 @@ export function ResultView({ name, scores, onRestart }: ResultViewProps) {
   // ========================= 页面渲染 =========================
   return (
     <div ref={resultRef} className="mx-auto flex max-w-3xl w-full flex-col gap-4 bg-white px-3 py-6 sm:px-5 sm:py-8">
+      {/* 顶部品牌标识 */}
+      <div className="mb-2 flex items-center justify-between text-xs text-slate-400">
+        <img
+          src="/branding/logo_color.png"
+          alt="凭远教育"
+          className="h-8 w-auto object-contain"
+        />
+        <span>学习力测评报告 · {yyyy}-{mm}-{dd}</span>
+      </div>
       {/* 封面：思维模式大圆环 */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
@@ -377,6 +386,18 @@ export function ResultView({ name, scores, onRestart }: ResultViewProps) {
           <RotateCcw className="size-4" />
           重新测评
         </button>
+      </div>
+
+      {/* 页脚：品牌 logo + 版权 */}
+      <div className="mt-6 flex flex-col items-center gap-2 border-t border-slate-100 pt-5">
+        <img
+          src="/branding/logo_inline.png"
+          alt="凭远教育 APP-ARK"
+          className="h-6 w-auto object-contain opacity-80"
+        />
+        <p className="text-center text-[11px] leading-relaxed text-slate-400">
+          凭远教育 APP-ARK © {yyyy}　·　本报告为个性化测评结果，仅供参考
+        </p>
       </div>
     </div>
   );

@@ -545,8 +545,24 @@ export function PdfTemplate({ name, scores, dateStr }: PdfTemplateProps) {
           'ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Segoe UI", Roboto, sans-serif',
         color: COLOR_SLATE_DARK,
         boxSizing: "border-box",
+        position: "relative", // 为水印提供定位基准
       }}
     >
+      {/* ========== 水印：半透明平铺 fill 整页，不阻挡内容 ========== */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          inset: 0,
+          pointerEvents: "none",
+          userSelect: "none",
+          backgroundImage: "url('/branding/watermark.jpg')",
+          backgroundSize: "260px 260px",
+          backgroundRepeat: "repeat",
+          backgroundPosition: "0 0",
+          opacity: 0.08,
+        }}
+      />
       {/* ========== 顶部：标题 + 姓名日期 ========== */}
       <div
         style={{
@@ -746,18 +762,26 @@ export function PdfTemplate({ name, scores, dateStr }: PdfTemplateProps) {
       <div
         style={{
           marginTop: 16,
-          paddingTop: 8,
+          paddingTop: 10,
           borderTop: `1px solid #E2E8F0`,
           display: "flex",
           justifyContent: "space-between",
+          alignItems: "center",
           fontSize: 9,
           color: COLOR_SLATE,
         }}
       >
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <img
+            src="/branding/logo_inline.png"
+            alt="凭远教育"
+            style={{ width: 70, height: "auto", objectFit: "contain" }}
+          />
+          <span>凭远教育 APP-ARK · 本报告为个性化测评结果，仅供参考</span>
+        </div>
         <span>
           学生：{name || "—"} · 测评日期：{date}
         </span>
-        <span>凭远教育 APP-ARK</span>
       </div>
     </div>
   );

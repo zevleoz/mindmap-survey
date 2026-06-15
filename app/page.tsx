@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { ChevronDown, School, User, Users } from "lucide-react";
 
@@ -26,6 +26,7 @@ type Step =
   | "learning"
   | "stress-intro"
   | "stress"
+  | "submitted"
   | "result";
 
 const GENDER_OPTIONS = ["男", "女", "其他", "不愿透露"];
@@ -54,8 +55,20 @@ function IconInput({
 
 function PageLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#FBF7F0] to-white">
-      {children}
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-[#FBF7F0] to-white">
+      {/* 品牌水印：平铺 fill 整页，opacity 0.08，不阻挡点击 */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-0 select-none"
+        style={{
+          backgroundImage: "url('/branding/watermark.jpg')",
+          backgroundSize: "280px 280px",
+          backgroundRepeat: "repeat",
+          backgroundPosition: "0 0",
+          opacity: 0.08,
+        }}
+      />
+      <div className="relative z-10">{children}</div>
     </div>
   );
 }
@@ -254,6 +267,42 @@ export default function SurveyPage() {
   const [scores, setScores] = useState<SurveyScores | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [responseId, setResponseId] = useState<string | null>(null);
+  // 是否"解锁查看报告"（管理员通过 token 访问时为 true）
+  const [unlocked, setUnlocked] = useState(false);
+  const [unlockLoading, setUnlockLoading] = useState(false);
+
+  // URL 参数解锁：?token=<responseId> 或 ?unlock=1&token=<responseId>
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const url = new URL(window.location.href);
+      const token = url.searchParams.get("token");
+      if (token) {
+        setUnlockLoading(true);
+        fetch(`/api/responses/${encodeURIComponent(token)}?token=${encodeURIComponent(token)}`)
+          .then(async (res) => {
+            if (!res.ok) throw new Error((await res.json()).error || "加载失败");
+            return res.json();
+          })
+          .then((data) => {
+            if (data && data.scores) {
+              setScores(data.scores);
+              if (typeof data.name === "string") setName(data.name);
+              setResponseId(data.id || token);
+              setUnlocked(true);
+              setStep("result");
+            }
+          })
+          .catch((e) => {
+            setError(e instanceof Error ? e.message : "加载失败");
+          })
+          .finally(() => setUnlockLoading(false));
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   // 稳定打乱：只在 mount 时打乱一次，之后永远不变；两个分池独立打乱，不交叉
   const shuffled = useMemo(() => shuffleQuestionIds(), []);
@@ -307,7 +356,6 @@ export default function SurveyPage() {
           `还有 ${TOTAL_LEARNING_QUESTIONS - answeredLearningCount} 道学习力题目未作答`
         );
         setStep("learning");
-        // 跳转到第一个未作答的页面
         const missing = learningPages.findIndex((p) =>
           p.some((id) => learningAnswers[String(id)] === undefined)
         );
@@ -340,12 +388,31 @@ export default function SurveyPage() {
             stressAnswers,
           }),
         });
+
+        // 检查返回是否是 JSON
+        const contentType = res.headers.get("content-type") || "";
+        if (!res.ok) {
+          if (contentType.includes("application/json")) {
+            const data = await res.json();
+            throw new Error(data.error || "提交失败");
+          } else {
+            throw new Error("服务端返回异常，请稍后重试");
+          }
+        }
+
+        if (!contentType.includes("application/json")) {
+          throw new Error("服务端返回数据异常，请稍后重试");
+        }
+
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "提交失败");
         setScores(data.scores);
-        setStep("result");
+        setResponseId(data.id || null);
+        // 成功：跳转到"测评完成"页
+        setStep("submitted");
+        window.scrollTo({ top: 0, left: 0 });
       } catch (err) {
-        setError(err instanceof Error ? err.message : "提交失败，请稍后重试");
+        const message = err instanceof Error ? err.message : "提交失败，请稍后重试";
+        setError(message);
       } finally {
         setSubmitting(false);
       }
@@ -483,7 +550,15 @@ export default function SurveyPage() {
   if (step === "landing") {
     return (
       <PageLayout>
-        <main className="mx-auto flex min-h-screen max-w-2xl w-full flex-col px-5 py-12 sm:px-8">
+        <main className="mx-auto flex min-h-screen max-w-2xl w-full flex-col px-5 py-10 sm:px-8">
+          {/* 顶部品牌 logo */}
+          <div className="mb-6 flex items-center justify-center">
+            <img
+              src="/branding/logo_red.png"
+              alt="凭远教育"
+              className="h-10 w-auto object-contain sm:h-12"
+            />
+          </div>
           <div className="rounded-[24px] bg-white p-6 shadow-[0_2px_12px_rgba(184,115,51,0.08)] sm:p-8">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-800">
               <span className="size-1.5 rounded-full bg-amber-700" />
@@ -644,11 +719,77 @@ export default function SurveyPage() {
     );
   }
 
-  if (step === "result" && scores) {
+  if (step === "submitted") {
+    return (
+      <PageLayout>
+        <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col items-center justify-center px-5 py-16 sm:px-8">
+          <div className="w-full rounded-[24px] bg-white p-8 text-center shadow-[0_2px_12px_rgba(184,115,51,0.08)] sm:p-10">
+            <div className="mx-auto flex size-20 items-center justify-center rounded-full bg-amber-50">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#B45309"
+                strokeWidth={2.2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="size-10"
+              >
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+            </div>
+            <h1 className="mt-6 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+              测评完成！
+            </h1>
+            <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-slate-600">
+              你的学习力测评报告已生成。
+            </p>
+            <div className="mx-auto mt-4 w-full max-w-md rounded-xl border border-slate-100 bg-slate-50/70 p-4 text-left text-xs leading-relaxed text-slate-600">
+              <div className="font-semibold text-slate-800">
+                请联系你的凭远教育顾问解锁完整报告
+              </div>
+              <div className="mt-2">
+                顾问会为你解读报告，结合你的目标与学习路径给出专业建议。
+              </div>
+              <div className="mt-3 border-t border-slate-100 pt-3 text-[11px] text-slate-500">
+                姓名：{name || "—"}
+                {school ? <>　·　学校：{school}</> : null}
+              </div>
+            </div>
+
+            {/* 底部品牌 logo 与联系方式 */}
+            <div className="mt-10 flex flex-col items-center gap-3">
+              <img
+                src="/branding/logo_color.png"
+                alt="凭远教育"
+                className="h-10 w-auto object-contain"
+              />
+              <div className="text-xs text-slate-500">
+                凭远教育 APP-ARK　·　用心陪伴你的留学之路
+              </div>
+            </div>
+          </div>
+        </main>
+      </PageLayout>
+    );
+  }
+
+  // 学生不能直接跳转到结果页，只有管理员通过 token 解锁后才显示
+  if (step === "result" && scores && unlocked) {
     return (
       <PageLayout>
         <main className="w-full py-8">
           <ResultView name={name} scores={scores} onRestart={handleRestart} />
+        </main>
+      </PageLayout>
+    );
+  }
+
+  if (unlockLoading) {
+    return (
+      <PageLayout>
+        <main className="mx-auto flex min-h-screen w-full max-w-2xl items-center justify-center px-5 py-12 sm:px-8">
+          <div className="text-sm text-slate-500">正在加载报告…</div>
         </main>
       </PageLayout>
     );
@@ -724,6 +865,13 @@ export default function SurveyPage() {
           total={learningPages.length}
           color="amber"
         />
+        {error && (
+          <div className="mx-auto mt-3 w-full max-w-2xl px-4 sm:px-6">
+            <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              {error}
+            </div>
+          </div>
+        )}
         <main className="mx-auto flex w-full max-w-2xl flex-col space-y-4 px-4 py-6 pb-32 sm:px-6">
           {currentLearningPage.map((qid, idx) => {
             const q = LEARNING_QUESTION_BANK[qid];
@@ -772,6 +920,13 @@ export default function SurveyPage() {
         total={pressurePages.length}
         color="teal"
       />
+      {error && (
+        <div className="mx-auto mt-3 w-full max-w-2xl px-4 sm:px-6">
+          <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            {error}
+          </div>
+        </div>
+      )}
       <main className="mx-auto flex w-full max-w-2xl flex-col space-y-4 px-4 py-6 pb-32 sm:px-6">
         {currentPressurePage.map((qid, idx) => {
           const q = PRESSURE_QUESTIONS.find((x) => x.id === qid);
