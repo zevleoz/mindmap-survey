@@ -162,21 +162,23 @@ function TopProgress({
   color: "amber" | "teal";
 }) {
   return (
-    <div className="sticky inset-x-0 top-0 z-50 w-full border-b border-slate-200 bg-white/80 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-white/60">
+    <div className="fixed inset-x-0 top-0 z-50 w-full border-b border-slate-200 bg-white/80 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-white/60">
       <div className="mx-auto max-w-3xl px-3 py-3 sm:px-4">
+        {/* 行 1：左(文字) 右(百分比) */}
         <div className="mb-2 flex items-center justify-between text-sm">
-          <span className="font-medium text-slate-700">
+          <span className="min-w-0 truncate text-slate-700 font-medium">
             第 {current} / {total} 部分 · {title}
           </span>
           <span
             className={cn(
-              "font-medium tabular-nums",
+              "tabular-nums font-medium",
               color === "teal" ? "text-teal-700" : "text-amber-700"
             )}
           >
             {progress}% 已完成
           </span>
         </div>
+        {/* 行 2：进度条 */}
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
           <div
             className={cn(
@@ -578,12 +580,12 @@ export default function SurveyPage() {
             </div>
           </div>
 
-          {/* 品牌 Logo：放在描述区域和按钮之间 */}
-          <div className="flex flex-col items-center justify-center gap-3 py-8 sm:py-10">
+          {/* 品牌 Logo：放在上方信息卡片与下方按钮之间，用 flex-1 占据中间空间，在垂直和水平方向居中 */}
+          <div className="flex flex-1 items-center justify-center py-8 sm:py-10">
             <img
               src="/branding/logo_color.png"
               alt="凭远教育"
-              className="h-20 w-auto object-contain sm:h-28"
+              className="h-32 w-32 max-h-[30vh] max-w-[30vh] object-contain sm:h-44 sm:w-44 md:h-48 md:w-48 lg:h-56 lg:w-56"
             />
           </div>
 
@@ -877,7 +879,7 @@ export default function SurveyPage() {
             </div>
           </div>
         )}
-        <main className="mx-auto flex w-full max-w-2xl flex-col space-y-4 px-4 py-6 pb-32 sm:px-6">
+        <main className="mx-auto flex w-full max-w-2xl flex-col space-y-4 px-4 pt-16 pb-32 sm:px-6">
           {currentLearningPage.map((qid, idx) => {
             const q = LEARNING_QUESTION_BANK[qid];
             if (!q) return null;
@@ -932,7 +934,7 @@ export default function SurveyPage() {
           </div>
         </div>
       )}
-      <main className="mx-auto flex w-full max-w-2xl flex-col space-y-4 px-4 py-6 pb-32 sm:px-6">
+      <main className="mx-auto flex w-full max-w-2xl flex-col space-y-4 px-4 pt-16 pb-32 sm:px-6">
         {currentPressurePage.map((qid, idx) => {
           const q = PRESSURE_QUESTIONS.find((x) => x.id === qid);
           if (!q) return null;
