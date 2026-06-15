@@ -189,13 +189,6 @@ export const PRESSURE_QUESTION_IDS = Array.from({ length: 30 }, (_, i) => i + 1)
 export const TOTAL_LEARNING_QUESTIONS = 60;
 export const TOTAL_PRESSURE_QUESTIONS = 30;
 
-export interface SurveyScores {
-  percent: Record<Dimension, number>;
-  average10: Record<Dimension, number>;
-  pressure: Record<PressureDimension, number>;
-  mindsetLabel: "成长型思维" | "固定型思维";
-}
-
 function shuffleArray<T>(array: T[]): T[] {
   const result = [...array];
   for (let i = result.length - 1; i > 0; i--) {
@@ -205,16 +198,41 @@ function shuffleArray<T>(array: T[]): T[] {
   return result;
 }
 
-export function getShuffledGroupQuestions(groupIndex: number): number[] {
-  const group = SURVEY_GROUPS[groupIndex];
-  if (!group) return [];
-  return shuffleArray(group.questionIds);
+/** 学习力全部 60 道题目随机打乱（整池），不分维度 */
+export function getShuffledAllLearning(): number[] {
+  return shuffleArray(LEARNING_QUESTION_IDS);
 }
 
-export function getShuffledPressureQuestions(groupIndex: number): number[] {
-  const group = PRESSURE_GROUPS[groupIndex];
-  if (!group) return [];
-  return shuffleArray(group.questionIds);
+/** 学业压力全部 30 道题目随机打乱（整池），不分维度 */
+export function getShuffledAllPressure(): number[] {
+  return shuffleArray(PRESSURE_QUESTION_IDS);
+}
+
+/** 学习力分页面：把 60 道打乱后的题目按 pageSize 切页，学生看不到维度 */
+export function splitIntoPages(
+  ids: number[],
+  pageSize = 10
+): number[][] {
+  const pages: number[][] = [];
+  for (let i = 0; i < ids.length; i += pageSize) {
+    pages.push(ids.slice(i, i + pageSize));
+  }
+  return pages;
+}
+
+/** 整池打乱学习力 60 题 + 学业压力 30 题，两个数组独立打乱，返回 { learning, pressure } */
+export function shuffleQuestionIds(): { learning: number[]; pressure: number[] } {
+  return {
+    learning: shuffleArray(LEARNING_QUESTION_IDS),
+    pressure: shuffleArray(PRESSURE_QUESTION_IDS),
+  };
+}
+
+export interface SurveyScores {
+  percent: Record<Dimension, number>;
+  average10: Record<Dimension, number>;
+  pressure: Record<PressureDimension, number>;
+  mindsetLabel: "成长型思维" | "固定型思维";
 }
 
 function raw(answers: Record<string, number>, q: number): number {

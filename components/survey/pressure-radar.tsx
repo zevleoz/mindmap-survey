@@ -40,12 +40,12 @@ export function PressureRadar({ pressure, showAverage }: PressureRadarProps) {
             tick={{ fill: "#94A3B8", fontSize: 10 }}
             axisLine={false}
           />
-          {/* 学生得分（紫色） */}
+          {/* 学生得分（青绿色 teal-600） */}
           <Radar
             name="学生得分"
             dataKey="value"
-            stroke="#8B5CF6"
-            fill="#8B5CF6"
+            stroke="#0D9488"
+            fill="#0D9488"
             fillOpacity={0.3}
             strokeWidth={2}
           />
