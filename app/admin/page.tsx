@@ -1,9 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, Lock, Search } from "lucide-react";
+import { Download, FileText, Lock, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  DIMENSIONS,
+  PRESSURE_DIMENSIONS,
+  type SurveyScores,
+} from "@/lib/survey-data";
 import {
   Table,
   TableBody,
@@ -327,6 +332,101 @@ export default function AdminPage() {
     }
   };
 
+  // ====================== 测试报告（假数据） ======================
+  const getDemoScores = (): SurveyScores => {
+    const average10: Record<string, number> = {};
+    const percent: Record<string, number> = {};
+    DIMENSIONS.forEach((d, i) => {
+      const avg = 5 + (i % 4) * 1.2;
+      average10[d] = Math.round(avg * 10) / 10;
+      percent[d] = Math.round(avg * 10);
+    });
+    const pressure: Record<string, number> = {};
+    PRESSURE_DIMENSIONS.forEach((d, i) => {
+      pressure[d] = Math.round((2 + i * 0.5) * 10) / 10;
+    });
+    return {
+      average10,
+      percent,
+      pressure,
+      mindsetLabel:
+        (average10["思维模式"] ?? 7) >= 5 ? "成长型思维" : "固定型思维",
+    };
+  };
+
+  const handleDownloadDemo = async () => {
+    setDownloadingId("__demo__");
+    try {
+      const [{ default: html2canvas }, { default: jsPDF }, { PdfTemplate }] =
+        await Promise.all([
+          import("html2canvas"),
+          import("jspdf"),
+          import("@/components/survey/pdf-template"),
+        ]);
+
+      const container = document.createElement("div");
+      container.style.cssText =
+        "position:fixed;left:-10000px;top:0;width:794px;z-index:-1;opacity:0;pointer-events:none";
+      document.body.appendChild(container);
+      const { createRoot } = await import("react-dom/client");
+      const root = createRoot(container);
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, "0");
+      const dd = String(today.getDate()).padStart(2, "0");
+      const dateStr = `${yyyy}-${mm}-${dd}`;
+
+      await new Promise<void>((resolve) => {
+        root.render(
+          <PdfTemplate name="测试用户" scores={getDemoScores()} dateStr={dateStr} />
+        );
+        requestAnimationFrame(() => setTimeout(() => resolve(), 200));
+      });
+
+      const templateEl = container.querySelector('[data-pdf-template]');
+      if (!templateEl) throw new Error("PDF 模板未找到");
+
+      const canvas = await html2canvas(templateEl as HTMLElement, {
+        scale: 4,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        logging: false,
+      });
+
+      root.unmount();
+      document.body.removeChild(container);
+
+      const imgData = canvas.toDataURL("image/jpeg", 0.95);
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "pt",
+        format: "a4",
+        compress: true,
+      });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = pageWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+      pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+      pdf.save(`测试报告_${dateStr}.pdf`);
+    } catch (err) {
+      console.error(err);
+      const msg = err instanceof Error ? err.message : String(err);
+      alert(`测试报告生成失败：${msg}`);
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FBF7F0] to-white">
       <main className="mx-auto max-w-[1400px] space-y-6 px-5 py-8">
@@ -365,6 +465,14 @@ export default function AdminPage() {
                 className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-800 outline-none transition-all focus:border-amber-700 focus:ring-2 focus:ring-amber-700/20 sm:w-64"
               />
             </div>
+            <Button
+              className="rounded-xl bg-amber-100 text-amber-800 hover:bg-amber-200"
+              onClick={handleDownloadDemo}
+              disabled={downloadingId !== null}
+            >
+              <FileText className="size-4" />
+              {downloadingId === "__demo__" ? "生成中..." : "下载测试报告"}
+            </Button>
             <Button
               className="rounded-xl bg-amber-700 text-white hover:bg-amber-800"
               disabled={records.length === 0}

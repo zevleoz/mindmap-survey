@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { createRoot } from "react-dom/client";
 import { ChevronDown, School, User, Users } from "lucide-react";
 
 import { ResultView } from "@/components/survey/result-view";
@@ -469,86 +468,6 @@ export default function SurveyPage() {
 
   // ======================== 各页面 ========================
 
-  // ============ 临时：生成假的 scores 用于 PDF 调试 ============
-  const getFakeScores = useCallback((): SurveyScores => {
-    const average10: Record<string, number> = {};
-    const percent: Record<string, number> = {};
-    DIMENSIONS.forEach((d, i) => {
-      const avg = 5 + (i % 4) * 1.2;
-      average10[d] = Math.round(avg * 10) / 10;
-      percent[d] = Math.round(avg * 10);
-    });
-    const pressure: Record<string, number> = {};
-    PRESSURE_DIMENSIONS.forEach((d, i) => {
-      pressure[d] = Math.round((2 + i * 0.5) * 10) / 10;
-    });
-    return {
-      average10,
-      percent,
-      pressure,
-      mindsetLabel: (average10["思维模式"] ?? 7) >= 5 ? "成长型思维" : "固定型思维",
-    };
-  }, []);
-
-  // ============ 临时：直接下载 PDF 进行调试 ============
-  const handleDebugDownload = async () => {
-    try {
-      const [{ default: html2canvas }, { default: jsPDF }, { PdfTemplate }] =
-        await Promise.all([
-          import("html2canvas"),
-          import("jspdf"),
-          import("@/components/survey/pdf-template"),
-        ]);
-      const scores = getFakeScores();
-      // 离屏容器
-      const container = document.createElement("div");
-      container.style.cssText =
-        "position:fixed;left:-10000px;top:0;width:794px;z-index:-1;opacity:0;pointer-events:none";
-      document.body.appendChild(container);
-      const root = createRoot(container);
-      await new Promise<void>((resolve) => {
-        root.render(<PdfTemplate name="测试用户" scores={scores} dateStr="2026-06-15" />);
-        requestAnimationFrame(() => setTimeout(() => resolve(), 50));
-      });
-      const templateEl = container.querySelector('[data-pdf-template]');
-      if (!templateEl) throw new Error("PDF 模板未找到");
-      const canvas = await html2canvas(templateEl as HTMLElement, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#ffffff",
-        logging: false,
-      });
-      root.unmount();
-      document.body.removeChild(container);
-      const imgData = canvas.toDataURL("image/jpeg", 0.95);
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "pt",
-        format: "a4",
-        compress: true,
-      });
-      const pw = pdf.internal.pageSize.getWidth();
-      const ph = pdf.internal.pageSize.getHeight();
-      const iw = pw;
-      const ih = (canvas.height * iw) / canvas.width;
-      let hl = ih;
-      let pos = 0;
-      pdf.addImage(imgData, "JPEG", 0, pos, iw, ih);
-      hl -= ph;
-      while (hl > 0) {
-        pos = hl - ih;
-        pdf.addPage();
-        pdf.addImage(imgData, "JPEG", 0, pos, iw, ih);
-        hl -= ph;
-      }
-      pdf.save("测试报告.pdf");
-    } catch (err) {
-      console.error("PDF 调试失败", err);
-      const msg = err instanceof Error ? err.message : String(err);
-      alert("PDF 测试失败：" + msg);
-    }
-  };
-
   if (step === "landing") {
     return (
       <PageLayout>
@@ -600,17 +519,6 @@ export default function SurveyPage() {
               className="h-14 w-full rounded-2xl bg-amber-700 text-base font-semibold text-white hover:bg-amber-800 active:scale-95 transition-all"
             >
               开始测评
-            </button>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleDebugDownload();
-              }}
-              className="h-11 w-full rounded-2xl border border-slate-200 text-sm font-medium text-slate-500 hover:text-slate-700 hover:border-slate-300 active:scale-95 transition-all"
-            >
-              测试 PDF 下载
             </button>
           </div>
         </main>
