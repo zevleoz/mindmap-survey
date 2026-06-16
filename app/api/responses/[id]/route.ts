@@ -1,53 +1,14 @@
 import { NextResponse } from "next/server";
 
-import { prisma } from "@/lib/prisma";
+import {
+  DIMENSIONS,
+  PRESSURE_DIMENSIONS,
+  calculateScores,
+} from "@/lib/survey-data";
+import { prisma, isDatabaseUsable } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-/**
- * 解析数据库里存的两个 JSON 字符串：
- *   learningScores = { [Dimension]: percent, mindsetLabel: string }
- *   stressScores   = { 学业压力_[PressureDimension]: number, ... }
- * 返回 SurveyScores 格式：{ average10, percent, pressure, mindsetLabel }
- */
-function parseScores(learningScores: string, pressureScores: string) {
-  let percent: Record<string, number> = {};
-  let average10: Record<string, number> = {};
-  let mindsetLabel = "成长型思维";
-  try {
-    const obj = JSON.parse(learningScores || "{}");
-    if (obj && typeof obj === "object") {
-      for (const [k, v] of Object.entries(obj)) {
-        if (k === "mindsetLabel") continue;
-        if (typeof v === "number") {
-          percent[k] = v;
-          // percent = average10 * 100，反向推导
-          average10[k] = Math.round((v / 10) * 10) / 10;
-        }
-      }
-      if (typeof obj.mindsetLabel === "string") mindsetLabel = obj.mindsetLabel;
-    }
-  } catch {
-    percent = {};
-    average10 = {};
-  }
-
-  let pressure: Record<string, number> = {};
-  try {
-    const obj = JSON.parse(pressureScores || "{}");
-    if (obj && typeof obj === "object") {
-      for (const [k, v] of Object.entries(obj)) {
-        const key = k.startsWith("学业压力_") ? k.slice(5) : k;
-        if (typeof v === "number") pressure[key] = v;
-      }
-    }
-  } catch {
-    pressure = {};
-  }
-
-  return { average10, percent, pressure, mindsetLabel };
-}
 
 export async function GET(
   _req: Request,
@@ -62,21 +23,91 @@ export async function GET(
       );
     }
 
+    const usable = await isDatabaseUsable();
+    if (!usable) {
+      return NextResponse.json(
+        {
+          error:
+            "数据库尚未配置，无法查询单条测评记录。请配置 DATABASE_URL 并执行 `npx prisma migrate deploy`。",
+        },
+        { status: 503 }
+      );
+    }
+
     const response = await prisma.response.findUnique({
       where: { id },
       include: { student: true },
     });
     if (!response) {
       return NextResponse.json(
-        { error: "未找到该报告" },
+        { error: "未找到该测评记录" },
         { status: 404 }
       );
     }
 
-    const { average10, percent, pressure, mindsetLabel } = parseScores(
-      response.learningScores,
-      response.stressScores
-    );
+    // 原始 q1..q90 分数
+    const raw: Record<string, number | undefined> = {};
+    for (let i = 1; i <= 90; i++) {
+      const key = `q${i}` as keyof typeof response;
+      const v = response[key];
+      if (typeof v === "number") raw[key] = v;
+    }
+
+    // 维度得分：优先使用存储的 JSON；若缺失则基于 q1..q90 重算
+    let percent: Record<string, number> = {};
+    let pressure: Record<string, number> = {};
+    let mindsetLabel: string | null = response.mindsetLabel ?? null;
+
+    const dim =
+      (response as unknown as { dimensionScores?: string | null })
+        .dimensionScores ?? null;
+    const pres =
+      (response as unknown as { pressureScores?: string | null })
+        .pressureScores ?? null;
+
+    if (dim) {
+      try {
+        const v = JSON.parse(dim);
+        if (v && typeof v === "object") {
+          for (const d of DIMENSIONS) {
+            const n = (v as Record<string, unknown>)[d];
+            if (typeof n === "number") percent[d] = n;
+          }
+        }
+      } catch {
+        // 忽略
+      }
+    }
+    if (pres) {
+      try {
+        const v = JSON.parse(pres);
+        if (v && typeof v === "object") {
+          for (const d of PRESSURE_DIMENSIONS) {
+            const n = (v as Record<string, unknown>)[d];
+            if (typeof n === "number") pressure[d] = n;
+          }
+        }
+      } catch {
+        // 忽略
+      }
+    }
+
+    if (Object.keys(percent).length === 0) {
+      const learningAnswers: Record<string, number> = {};
+      const pressureAnswers: Record<string, number> = {};
+      for (let i = 1; i <= 60; i++) {
+        const v = raw[`q${i}`];
+        if (typeof v === "number") learningAnswers[String(i)] = v;
+      }
+      for (let i = 61; i <= 90; i++) {
+        const v = raw[`q${i}`];
+        if (typeof v === "number") pressureAnswers[String(i - 60)] = v;
+      }
+      const scores = calculateScores(learningAnswers, pressureAnswers);
+      percent = scores.percent as Record<string, number>;
+      pressure = scores.pressure as Record<string, number>;
+      mindsetLabel = scores.mindsetLabel;
+    }
 
     return NextResponse.json({
       id: response.id,
@@ -85,15 +116,13 @@ export async function GET(
       school: response.student.school,
       gender: response.student.gender,
       createdAt: response.createdAt.toISOString(),
-      scores: {
-        average10,
-        percent,
-        pressure,
-        mindsetLabel,
-      },
+      answers: raw,
+      percent,
+      pressure,
+      mindsetLabel,
     });
   } catch (error) {
-    console.error("Failed to fetch response:", error);
+    console.error("Failed to fetch response detail:", error);
     return NextResponse.json(
       { error: "获取报告失败，请稍后重试" },
       { status: 500 }

@@ -52,9 +52,27 @@ function IconInput({
   );
 }
 
-function PageLayout({ children }: { children: React.ReactNode }) {
+function PageLayout({ children, error, onCloseError }: { children: React.ReactNode; error?: string | null; onCloseError?: () => void }) {
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-gradient-to-b from-[#FBF7F0] to-white">
+      {/* 全局错误提示条：固定在页面顶部，显眼，容易被看到 */}
+      {error ? (
+        <div className="sticky top-0 z-30 w-full bg-rose-50 border-b border-rose-200">
+          <div className="mx-auto max-w-3xl flex items-start justify-between gap-3 px-5 py-3 sm:px-8">
+            <p className="text-sm text-rose-700 leading-snug">{error}</p>
+            {onCloseError ? (
+              <button
+                type="button"
+                onClick={onCloseError}
+                className="text-rose-500 hover:text-rose-700 text-xs font-medium whitespace-nowrap shrink-0"
+                aria-label="关闭错误提示"
+              >
+                关闭
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
       {/* 品牌水印：平铺 fill 整页，opacity 0.08，不阻挡点击 */}
       <div
         aria-hidden="true"
@@ -79,6 +97,7 @@ function PageLayout({ children }: { children: React.ReactNode }) {
 function QuestionCard({
   number,
   text,
+  en,
   value,
   onChange,
   scale,
@@ -86,6 +105,7 @@ function QuestionCard({
 }: {
   number: number;
   text: string;
+  en?: string;
   value?: number;
   onChange: (v: number) => void;
   scale: 10 | 5;
@@ -105,9 +125,16 @@ function QuestionCard({
         >
           {number}
         </div>
-        <p className="text-base font-medium leading-relaxed text-slate-800">
-          {text}
-        </p>
+        <div>
+          <p className="text-base font-medium leading-relaxed text-slate-800">
+            {text}
+          </p>
+          {en ? (
+            <p className="mt-2 text-sm leading-relaxed text-slate-400 break-words">
+              {en}
+            </p>
+          ) : null}
+        </div>
       </div>
 
       {/* 第二行：按钮区域 - 必须占满卡片宽度，不能有额外左边距 */}
@@ -215,42 +242,59 @@ function BottomNav({
     variant === "teal"
       ? "bg-teal-600 text-white hover:bg-teal-700"
       : "bg-amber-700 text-white hover:bg-amber-800";
+  const buttonText = submitting
+    ? "正在提交，请稍候…"
+    : disabled
+    ? "请先完成本组题目"
+    : nextLabel;
   return (
-    <div className="fixed inset-x-0 bottom-0 z-20 w-full border-t border-slate-100 bg-white">
-      <div className="mx-auto flex max-w-3xl items-center gap-3 px-3 py-4 sm:px-4">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onBack();
-          }}
-          className="h-11 shrink-0 rounded-2xl border border-slate-200 px-4 text-sm font-medium text-slate-700 active:scale-95 transition-all"
-        >
-          {backLabel}
-        </button>
+    <div className="fixed inset-x-0 bottom-0 z-20 w-full border-t border-slate-200 bg-white/80 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-white/60">
+      <div className="mx-auto max-w-3xl px-3 py-4 sm:px-4">
         {info && (
-          <div className="min-w-0 flex-1 text-center">
-            <p className="truncate text-xs text-slate-600 sm:text-sm">{info}</p>
-          </div>
+          <p className="mb-2 truncate text-center text-xs text-slate-500 sm:text-sm">
+            {info}
+          </p>
         )}
-        <button
-          type="button"
-          disabled={disabled || submitting}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onNext();
-          }}
-          className={cn(
-            "h-11 shrink-0 rounded-2xl px-4 text-sm font-semibold transition-all active:scale-95",
-            disabled || submitting
-              ? "bg-slate-200 text-slate-400"
-              : activeColors
-          )}
-        >
-          {nextLabel}
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onBack();
+            }}
+            className="h-11 shrink-0 rounded-2xl border border-slate-200 px-4 text-sm font-medium text-slate-700 active:scale-95 transition-all"
+          >
+            {backLabel}
+          </button>
+          <button
+            type="button"
+            disabled={disabled || submitting}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onNext();
+            }}
+            className={cn(
+              "h-11 shrink-0 flex-1 rounded-2xl px-4 text-sm font-semibold transition-all active:scale-95",
+              disabled || submitting
+                ? "bg-slate-200 text-slate-400 cursor-not-allowed"
+                : activeColors
+            )}
+          >
+            {submitting ? (
+              <span className="inline-flex items-center justify-center gap-2">
+                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                </svg>
+                {buttonText}
+              </span>
+            ) : (
+              buttonText
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -386,7 +430,7 @@ export default function SurveyPage() {
             school,
             gender,
             learningAnswers,
-            stressAnswers,
+            pressureAnswers: stressAnswers,
           }),
         });
 
@@ -470,7 +514,7 @@ export default function SurveyPage() {
 
   if (step === "landing") {
     return (
-      <PageLayout>
+      <PageLayout error={error} onCloseError={() => setError("")}>
         <main className="mx-auto flex min-h-screen max-w-2xl w-full flex-col px-5 py-10 sm:px-8">
           <div className="rounded-[24px] bg-white p-6 shadow-[0_2px_12px_rgba(184,115,51,0.08)] sm:p-8">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-800">
@@ -529,7 +573,7 @@ export default function SurveyPage() {
   if (step === "info") {
     const infoValid = name.trim().length > 0;
     return (
-      <PageLayout>
+      <PageLayout error={error} onCloseError={() => setError("")}>
         <main className="mx-auto flex min-h-screen max-w-2xl w-full flex-col px-5 py-12 sm:px-8">
           <div className="rounded-[24px] bg-white p-6 shadow-[0_2px_12px_rgba(184,115,51,0.08)] sm:p-8">
             <h2 className="text-xl font-bold tracking-tight text-slate-900">
@@ -633,7 +677,7 @@ export default function SurveyPage() {
 
   if (step === "submitted") {
     return (
-      <PageLayout>
+      <PageLayout error={error} onCloseError={() => setError("")}>
         <main className="mx-auto flex min-h-screen w-full max-w-2xl items-center justify-center px-5 py-12 sm:px-8">
           <div className="w-full rounded-[24px] bg-white p-8 text-center shadow-[0_2px_12px_rgba(184,115,51,0.08)] sm:p-12">
             <div className="mx-auto flex size-24 items-center justify-center rounded-full bg-amber-50 sm:size-28">
@@ -692,7 +736,7 @@ export default function SurveyPage() {
   // 学生不能直接跳转到结果页，只有管理员通过 token 解锁后才显示
   if (step === "result" && scores && unlocked) {
     return (
-      <PageLayout>
+      <PageLayout error={error} onCloseError={() => setError("")}>
         <main className="w-full py-8">
           <ResultView name={name} scores={scores} onRestart={handleRestart} />
         </main>
@@ -702,7 +746,7 @@ export default function SurveyPage() {
 
   if (unlockLoading) {
     return (
-      <PageLayout>
+      <PageLayout error={error} onCloseError={() => setError("")}>
         <main className="mx-auto flex min-h-screen w-full max-w-2xl items-center justify-center px-5 py-12 sm:px-8">
           <div className="text-sm text-slate-500">正在加载报告…</div>
         </main>
@@ -712,7 +756,7 @@ export default function SurveyPage() {
 
   if (step === "stress-intro") {
     return (
-      <PageLayout>
+      <PageLayout error={error} onCloseError={() => setError("")}>
         <main className="mx-auto flex min-h-screen max-w-2xl w-full flex-col px-5 py-12 sm:px-8">
           <div className="rounded-[24px] bg-white p-6 shadow-[0_2px_12px_rgba(14,116,144,0.08)] sm:p-8">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-teal-50 px-3 py-1 text-xs font-medium text-teal-800">
@@ -772,7 +816,7 @@ export default function SurveyPage() {
   // ============ 学习力答题页 ============
   if (step === "learning") {
     return (
-      <PageLayout>
+      <PageLayout error={error} onCloseError={() => setError("")}>
         <TopProgress
           progress={learningProgress}
           title="学习力测评"
@@ -797,6 +841,7 @@ export default function SurveyPage() {
                 key={qid}
                 number={globalNum}
                 text={q.text}
+                en={q.en}
                 value={learningAnswers[String(qid)]}
                 onChange={(v) => handleLearningAnswer(qid, v)}
                 scale={10}
@@ -815,7 +860,7 @@ export default function SurveyPage() {
             }
           }}
           onNext={handleNextLearningPage}
-          nextLabel={isLastLearningPage ? "第二部份" : "下一页"}
+          nextLabel={isLastLearningPage ? "第二部分" : "下一页"}
           disabled={!pageComplete(currentLearningPage, learningAnswers)}
           submitting={submitting}
           variant={isLastLearningPage ? "teal" : "amber"}
@@ -827,7 +872,7 @@ export default function SurveyPage() {
 
   // ============ 学业压力答题页 ============
   return (
-    <PageLayout>
+    <PageLayout error={error} onCloseError={() => setError("")}>
       <TopProgress
         progress={stressProgress}
         title="学业压力测评"
@@ -852,6 +897,7 @@ export default function SurveyPage() {
               key={qid}
               number={globalNum}
               text={q.text}
+              en={q.en}
               value={stressAnswers[String(qid)]}
               onChange={(v) => handleStressAnswer(qid, v)}
               scale={5}

@@ -1,30 +1,118 @@
--- CreateTable
-CREATE TABLE "Student" (
+-- PostgreSQL：mindmap_survey 主迁移
+-- 在 Vercel 上执行 `npx prisma migrate deploy` 时会运行
+-- 或在本地开发/部署前使用 `npx prisma db push` 等效推进
+CREATE TABLE IF NOT EXISTS "Student" (
     "id" UUID NOT NULL,
     "name" TEXT NOT NULL,
     "age" INTEGER,
     "school" TEXT,
     "gender" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
     CONSTRAINT "Student_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable
-CREATE TABLE "Response" (
+CREATE TABLE IF NOT EXISTS "Response" (
     "id" UUID NOT NULL,
     "studentId" UUID NOT NULL,
-    "learningAnswers" TEXT NOT NULL,
-    "stressAnswers" TEXT NOT NULL,
-    "learningScores" TEXT NOT NULL,
-    "stressScores" TEXT NOT NULL,
+    "dimensionScores" TEXT,
+    "pressureScores" TEXT,
+    "mindsetLabel" TEXT,
+    "q1" INTEGER,
+    "q2" INTEGER,
+    "q3" INTEGER,
+    "q4" INTEGER,
+    "q5" INTEGER,
+    "q6" INTEGER,
+    "q7" INTEGER,
+    "q8" INTEGER,
+    "q9" INTEGER,
+    "q10" INTEGER,
+    "q11" INTEGER,
+    "q12" INTEGER,
+    "q13" INTEGER,
+    "q14" INTEGER,
+    "q15" INTEGER,
+    "q16" INTEGER,
+    "q17" INTEGER,
+    "q18" INTEGER,
+    "q19" INTEGER,
+    "q20" INTEGER,
+    "q21" INTEGER,
+    "q22" INTEGER,
+    "q23" INTEGER,
+    "q24" INTEGER,
+    "q25" INTEGER,
+    "q26" INTEGER,
+    "q27" INTEGER,
+    "q28" INTEGER,
+    "q29" INTEGER,
+    "q30" INTEGER,
+    "q31" INTEGER,
+    "q32" INTEGER,
+    "q33" INTEGER,
+    "q34" INTEGER,
+    "q35" INTEGER,
+    "q36" INTEGER,
+    "q37" INTEGER,
+    "q38" INTEGER,
+    "q39" INTEGER,
+    "q40" INTEGER,
+    "q41" INTEGER,
+    "q42" INTEGER,
+    "q43" INTEGER,
+    "q44" INTEGER,
+    "q45" INTEGER,
+    "q46" INTEGER,
+    "q47" INTEGER,
+    "q48" INTEGER,
+    "q49" INTEGER,
+    "q50" INTEGER,
+    "q51" INTEGER,
+    "q52" INTEGER,
+    "q53" INTEGER,
+    "q54" INTEGER,
+    "q55" INTEGER,
+    "q56" INTEGER,
+    "q57" INTEGER,
+    "q58" INTEGER,
+    "q59" INTEGER,
+    "q60" INTEGER,
+    "q61" INTEGER,
+    "q62" INTEGER,
+    "q63" INTEGER,
+    "q64" INTEGER,
+    "q65" INTEGER,
+    "q66" INTEGER,
+    "q67" INTEGER,
+    "q68" INTEGER,
+    "q69" INTEGER,
+    "q70" INTEGER,
+    "q71" INTEGER,
+    "q72" INTEGER,
+    "q73" INTEGER,
+    "q74" INTEGER,
+    "q75" INTEGER,
+    "q76" INTEGER,
+    "q77" INTEGER,
+    "q78" INTEGER,
+    "q79" INTEGER,
+    "q80" INTEGER,
+    "q81" INTEGER,
+    "q82" INTEGER,
+    "q83" INTEGER,
+    "q84" INTEGER,
+    "q85" INTEGER,
+    "q86" INTEGER,
+    "q87" INTEGER,
+    "q88" INTEGER,
+    "q89" INTEGER,
+    "q90" INTEGER,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
     CONSTRAINT "Response_pkey" PRIMARY KEY ("id")
 );
 
--- CreateIndex
-CREATE INDEX "Response_studentId_idx" ON "Response"("studentId");
+CREATE INDEX IF NOT EXISTS "Response_studentId_idx" ON "Response"("studentId");
 
--- AddForeignKey
+ALTER TABLE "Response" DROP CONSTRAINT IF EXISTS "Response_studentId_fkey";
+
 ALTER TABLE "Response" ADD CONSTRAINT "Response_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

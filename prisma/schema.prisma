@@ -24,13 +24,105 @@ model Student {
   responses Response[]
 }
 
+// 90 道题独立列（q1..q90），分数为 1-10 或 1-5 的整数
+// q1..q60 = 学习力，q61..q90 = 学业压力
 model Response {
-  id              String   @id @default(uuid())
-  studentId       String
-  student         Student  @relation(fields: [studentId], references: [id])
-  learningAnswers String
-  stressAnswers   String
-  learningScores  String
-  stressScores    String
-  createdAt       DateTime @default(now())
+  id        String   @id @default(uuid())
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id])
+  // 学习力 10 个维度的综合得分（便于前端直接渲染百分比）
+  dimensionScores  String? // JSON: { "思维模式": 85, ... }
+  pressureScores   String? // JSON: { "学业负担": 3.2, ... }
+  mindsetLabel     String?
+  q1        Int?
+  q2        Int?
+  q3        Int?
+  q4        Int?
+  q5        Int?
+  q6        Int?
+  q7        Int?
+  q8        Int?
+  q9        Int?
+  q10       Int?
+  q11       Int?
+  q12       Int?
+  q13       Int?
+  q14       Int?
+  q15       Int?
+  q16       Int?
+  q17       Int?
+  q18       Int?
+  q19       Int?
+  q20       Int?
+  q21       Int?
+  q22       Int?
+  q23       Int?
+  q24       Int?
+  q25       Int?
+  q26       Int?
+  q27       Int?
+  q28       Int?
+  q29       Int?
+  q30       Int?
+  q31       Int?
+  q32       Int?
+  q33       Int?
+  q34       Int?
+  q35       Int?
+  q36       Int?
+  q37       Int?
+  q38       Int?
+  q39       Int?
+  q40       Int?
+  q41       Int?
+  q42       Int?
+  q43       Int?
+  q44       Int?
+  q45       Int?
+  q46       Int?
+  q47       Int?
+  q48       Int?
+  q49       Int?
+  q50       Int?
+  q51       Int?
+  q52       Int?
+  q53       Int?
+  q54       Int?
+  q55       Int?
+  q56       Int?
+  q57       Int?
+  q58       Int?
+  q59       Int?
+  q60       Int?
+  q61       Int?
+  q62       Int?
+  q63       Int?
+  q64       Int?
+  q65       Int?
+  q66       Int?
+  q67       Int?
+  q68       Int?
+  q69       Int?
+  q70       Int?
+  q71       Int?
+  q72       Int?
+  q73       Int?
+  q74       Int?
+  q75       Int?
+  q76       Int?
+  q77       Int?
+  q78       Int?
+  q79       Int?
+  q80       Int?
+  q81       Int?
+  q82       Int?
+  q83       Int?
+  q84       Int?
+  q85       Int?
+  q86       Int?
+  q87       Int?
+  q88       Int?
+  q89       Int?
+  q90       Int?
+  createdAt DateTime @default(now())
 }

@@ -242,13 +242,13 @@ export function ResultView({ name, scores, onRestart }: ResultViewProps) {
                 strokeWidth={7}
                 color="amber"
                 showNumber
-                displayNumber={thinkingAvg.toFixed(1)}
+                displayNumber={`${Math.round(thinkingPct)}%`}
               />
               <div className="flex flex-col items-center gap-3 sm:items-start">
                 <div>
                   <p className="text-sm font-medium text-slate-700">思维模式</p>
                   <p className="mt-1 text-sm text-slate-500">
-                    <span className="text-slate-700">综合得分</span> · {thinkingAvg.toFixed(1)} / 10
+                    <span className="text-slate-700">成长性倾向</span> · {Math.round(thinkingPct)}%
                   </p>
                 </div>
                 <div className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800">

@@ -1,34 +1,29 @@
 import { NextResponse } from "next/server";
 
 import {
+  DIMENSIONS,
+  PRESSURE_DIMENSIONS,
   calculateScores,
   LEARNING_QUESTION_IDS,
   PRESSURE_QUESTION_IDS,
   scoresToFlat,
 } from "@/lib/survey-data";
-import { prisma } from "@/lib/prisma";
+import { prisma, isDatabaseUsable } from "@/lib/prisma";
 
-// ========== 数据库可用性检测 ==========
-// 在 Vercel serverless 环境下：
-// 1) SQLite 无法持久化（每次请求都是全新临时环境）
-// 2) 可能尚未执行 prisma migrate，表不存在
-// 这里尝试一次探测性查询，失败后走"降级模式"——至少不让用户看到报错。
-
-let _dbUsable: boolean | null = null;
-
-async function isDatabaseUsable(): Promise<boolean> {
-  if (_dbUsable !== null) return _dbUsable;
-  try {
-    // 用最简单的探测查询判断数据库是否可用 + schema 是否已迁移
-    await prisma.$queryRaw`SELECT 1`;
-    // 探测 Student 表是否存在
-    await prisma.student.count();
-    _dbUsable = true;
-  } catch (err) {
-    console.warn("[api/responses] 数据库不可用，进入降级模式：", err);
-    _dbUsable = false;
+// 将 { "1": 5, "2": 3, ... } 转成 { q1: 5, q2: 3, ... } 对象
+function answersToColumns(
+  learningAnswers: Record<string, number>,
+  pressureAnswers: Record<string, number>
+): Record<string, number | undefined> {
+  const cols: Record<string, number | undefined> = {};
+  for (const id of LEARNING_QUESTION_IDS) {
+    cols[`q${id}`] = learningAnswers[String(id)];
   }
-  return _dbUsable;
+  for (const id of PRESSURE_QUESTION_IDS) {
+    // 学业压力的题号从 q61 开始
+    cols[`q${60 + id}`] = pressureAnswers[String(id)];
+  }
+  return cols;
 }
 
 export async function GET() {
@@ -51,42 +46,72 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
 
-    const records = responses.map((response) => {
-      const learningFlat: Record<string, unknown> = (() => {
-        try {
-          return JSON.parse(response.learningScores);
-        } catch {
-          return {};
-        }
-      })();
-      const stressFlat: Record<string, unknown> = (() => {
-        try {
-          return JSON.parse(response.stressScores);
-        } catch {
-          return {};
-        }
-      })();
+    const records = responses.map((r) => {
+      const raw: Record<string, number | undefined> = {};
+      for (let i = 1; i <= 90; i++) {
+        const key = `q${i}` as keyof typeof r;
+        const v = r[key];
+        if (typeof v === "number") raw[key] = v;
+      }
 
-      const scores: Record<string, unknown> = {
-        ...learningFlat,
-        ...stressFlat,
-      };
+      // 维度得分：优先使用存储的 JSON（更稳定）；若缺失则用 q1..q90 实时计算
+      let percent: Record<string, number> = {};
+      let pressure: Record<string, number> = {};
+      let mindsetLabel: string | null = r.mindsetLabel;
+
+      const parsedDim = safeParseJSON<Record<string, number>>(r.dimensionScores);
+      const parsedPressure = safeParseJSON<Record<string, number>>(r.pressureScores);
+
+      if (parsedDim && Object.keys(parsedDim).length > 0) {
+        percent = parsedDim;
+      } else {
+        // 若数据库中没有维度得分，则通过 q1..q90 重算一次（向后兼容）
+        const learningAnswers: Record<string, number> = {};
+        const pressureAnswers: Record<string, number> = {};
+        for (let i = 1; i <= 60; i++) {
+          const v = raw[`q${i}`];
+          if (typeof v === "number") learningAnswers[String(i)] = v;
+        }
+        for (let i = 61; i <= 90; i++) {
+          const v = raw[`q${i}`];
+          if (typeof v === "number") pressureAnswers[String(i - 60)] = v;
+        }
+        const scores = calculateScores(learningAnswers, pressureAnswers);
+        percent = scores.percent as Record<string, number>;
+        pressure = scores.pressure as Record<string, number>;
+        mindsetLabel = scores.mindsetLabel;
+      }
+      if (parsedPressure && Object.keys(parsedPressure).length > 0) {
+        pressure = parsedPressure;
+      }
 
       return {
-        id: response.id,
-        name: response.student.name,
-        age: response.student.age,
-        school: response.student.school,
-        gender: response.student.gender,
-        createdAt: response.createdAt.toISOString(),
-        scores,
+        id: r.id,
+        name: r.student.name,
+        age: r.student.age,
+        school: r.student.school,
+        gender: r.student.gender,
+        createdAt: r.createdAt.toISOString(),
+        answers: raw,
+        percent,
+        pressure,
+        mindsetLabel,
       };
     });
 
-    return NextResponse.json(records);
+    return NextResponse.json({ records });
   } catch (error) {
     console.error("Failed to fetch responses:", error);
     return NextResponse.json({ error: "获取数据失败" }, { status: 500 });
+  }
+}
+
+function safeParseJSON<T>(text: string | null | undefined): T | null {
+  if (!text) return null;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return null;
   }
 }
 
@@ -99,14 +124,14 @@ export async function POST(request: Request) {
       school,
       gender,
       learningAnswers,
-      stressAnswers,
+      pressureAnswers,
     } = body as {
       name?: string;
       age?: number | null;
       school?: string;
       gender?: string;
       learningAnswers?: Record<string, number>;
-      stressAnswers?: Record<string, number>;
+      pressureAnswers?: Record<string, number>;
     };
 
     if (!name?.trim()) {
@@ -119,7 +144,7 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    if (!stressAnswers || Object.keys(stressAnswers).length === 0) {
+    if (!pressureAnswers || Object.keys(pressureAnswers).length === 0) {
       return NextResponse.json(
         { error: "请完成学业压力测评" },
         { status: 400 }
@@ -141,7 +166,7 @@ export async function POST(request: Request) {
     }
 
     const missingStress = PRESSURE_QUESTION_IDS.filter(
-      (id) => stressAnswers[String(id)] === undefined
+      (id) => pressureAnswers[String(id)] === undefined
     );
     if (missingStress.length > 0) {
       return NextResponse.json(
@@ -154,11 +179,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const scores = calculateScores(learningAnswers, stressAnswers);
+    const scores = calculateScores(learningAnswers, pressureAnswers);
     const usable = await isDatabaseUsable();
 
     // ===== 数据库不可用时：降级模式，返回成功但不持久化 =====
-    // 这样前端不会报错，用户能正常看到"测评完成"页
     if (!usable) {
       console.warn(
         "[api/responses] 数据库未配置，以降级模式响应——测评未持久化。",
@@ -173,6 +197,23 @@ export async function POST(request: Request) {
       });
     }
 
+    // 维度得分扁平化保存（便于 Admin 面板直接使用）
+    const flatScores = scoresToFlat(scores);
+    // 过滤出数值字段（percent/压力维度），去掉 mindsetLabel 这种字符串
+    const dimNumeric: Record<string, number> = {};
+    for (const d of DIMENSIONS) {
+      const v = (flatScores as Record<string, number | string>)[d];
+      if (typeof v === "number") dimNumeric[d] = Math.round(v * 10) / 10;
+    }
+    const pressureNumeric: Record<string, number> = {};
+    for (const d of PRESSURE_DIMENSIONS) {
+      const key = `学业压力_${d}`;
+      const v = (flatScores as Record<string, number | string>)[key];
+      if (typeof v === "number") pressureNumeric[d] = v;
+    }
+
+    const columns = answersToColumns(learningAnswers, pressureAnswers);
+
     const student = await prisma.student.create({
       data: {
         name: name.trim(),
@@ -185,24 +226,10 @@ export async function POST(request: Request) {
     const response = await prisma.response.create({
       data: {
         studentId: student.id,
-        learningAnswers: JSON.stringify(learningAnswers),
-        stressAnswers: JSON.stringify(stressAnswers),
-        learningScores: JSON.stringify(
-          scoresToFlat({
-            percent: scores.percent,
-            average10: scores.average10,
-            pressure: {} as never,
-            mindsetLabel: scores.mindsetLabel,
-          })
-        ),
-        stressScores: JSON.stringify(
-          Object.fromEntries(
-            Object.entries(scores.pressure).map(([k, v]) => [
-              `学业压力_${k}`,
-              v,
-            ])
-          )
-        ),
+        dimensionScores: JSON.stringify(dimNumeric),
+        pressureScores: JSON.stringify(pressureNumeric),
+        mindsetLabel: scores.mindsetLabel,
+        ...columns,
       },
     });
 

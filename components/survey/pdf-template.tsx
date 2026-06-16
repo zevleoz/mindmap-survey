@@ -395,7 +395,7 @@ function ThinkingBlock({
             color: COLOR_SLATE_DARK,
           }}
         >
-          综合得分：{avg.toFixed(1)} / 10
+          综合得分：{Math.round(avg)}%
         </div>
         <div
           style={{
@@ -589,8 +589,8 @@ export function PdfTemplate({ name, scores, dateStr }: PdfTemplateProps) {
       <SectionTitle title="思维模式" color={COLOR_AMBER} />
       <ThinkingBlock
         percent={thinkingPct}
-        scoreText={thinkingAvg.toFixed(1)}
-        avg={thinkingAvg}
+        scoreText={`${Math.round(thinkingPct)}%`}
+        avg={thinkingPct}
         label={mindsetLabel}
         color={COLOR_AMBER}
       />
