@@ -452,20 +452,20 @@ export function scoresToFlat(
 // 这里挑出的题目覆盖了学业压力的 5 个维度，以便快速扫描
 export const CRITICAL_QUESTIONS = [
   // 学业负担（前 6 题）
-  { id: 1, domain: "学业负担", score: 5 },
-  { id: 2, domain: "学业负担", score: 3 },
-  // 考试焦虑（接下来 6 题）
-  { id: 7, domain: "考试焦虑", score: 5 },
-  { id: 12, domain: "考试焦虑", score: 5 },
-  // 自我施压（接下来 6 题）
-  { id: 14, domain: "自我施压", score: 5 },
-  { id: 18, domain: "自我施压", score: 5 },
-  // 家长期望（接下来 6 题）
-  { id: 20, domain: "家长期望", score: 5 },
-  { id: 24, domain: "家长期望", score: 5 },
-  // 身心困扰（最后 6 题）
-  { id: 26, domain: "身心困扰", score: 5 },
-  { id: 30, domain: "身心困扰", score: 5 },
+  { id: 2, domain: "学业负担", score: 5 },
+  { id: 4, domain: "学业负担", score: 5 },
+  // 师生关系（接下来 6 题）
+  { id: 8, domain: "师生关系", score: 5 },
+  { id: 9, domain: "师生关系", score: 5 },
+  { id: 10, domain: "师生关系", score: 5 },
+  // 家庭期望（接下来 6 题）
+  { id: 14, domain: "家庭期望", score: 5 },
+  { id: 17, domain: "家庭期望", score: 5 },
+  // 同伴竞争（接下来 6 题）
+  { id: 23, domain: "同伴竞争", score: 5 },
+  // 自我要求（最后 6 题）
+  { id: 26, domain: "自我要求", score: 5 },
+  { id: 30, domain: "自我要求", score: 5 },
 ];
 
 export function flatToScores(

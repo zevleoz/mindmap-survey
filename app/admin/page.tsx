@@ -435,8 +435,8 @@ function QuickViewModal({
             {criticalQs.map((c) => {
               const isHigh = c.value !== null && c.value !== undefined && c.value > 3;
               const bankQ = PRESSURE_QUESTIONS.find((q) => q.id === c.id);
-              const zh = c.text?.trim() || bankQ?.text || "";
-              const en = bankQ?.en || "";
+              const zh = bankQ?.text?.trim() ?? "";
+              const en = bankQ?.en?.trim() ?? "";
               return (
                 <div
                   key={c.id}
@@ -458,9 +458,7 @@ function QuickViewModal({
                       )}
                     </div>
                     <div className="mt-1 text-sm text-slate-800">{zh}</div>
-                    {en && (
-                      <div className="mt-1 text-xs text-slate-500">{en}</div>
-                    )}
+                    {en && <div className="mt-1 text-xs text-slate-500">{en}</div>}
                   </div>
                   <div className="shrink-0 text-right">
                     <div
