@@ -5,7 +5,12 @@ import { createRoot } from "react-dom/client";
 import { Download, Eye, FileText, LogOut, Lock, X } from "lucide-react";
 
 import { PdfTemplate } from "@/components/survey/pdf-template";
-import { PRESSURE_QUESTIONS, type Dimension, type PressureDimension } from "@/lib/survey-data";
+import {
+  LEARNING_QUESTION_BANK,
+  PRESSURE_QUESTIONS,
+  type Dimension,
+  type PressureDimension,
+} from "@/lib/survey-data";
 
 // ============ 常量 ============
 const ADMIN_PASSWORD = "appark2026";
@@ -334,6 +339,66 @@ function QuickViewModal({
           };
         });
 
+  // 学习力：自驱力（2 题）、深层动机（2 题）、深层方法（1 题）、表层动机（1 题）、表层方法（1 题）
+  // 题号与方向全部来自 survey-data.ts 的计分规则（score10(id, isReverse)）
+  // 判定：正向题 > 5 为需关注；反向题 < 5 为需关注
+  const LEARNING_SECTIONS: {
+    title: string;
+    items: { id: number; domain: string; isReverse: boolean }[];
+  }[] = [
+    {
+      title: "自驱力",
+      items: [
+        { id: 11, domain: "自主性", isReverse: false },
+        { id: 12, domain: "胜任感", isReverse: false },
+      ],
+    },
+    {
+      title: "深层动机",
+      items: [
+        { id: 23, domain: "深层动机", isReverse: false },
+        { id: 28, domain: "深层动机", isReverse: false },
+      ],
+    },
+    {
+      title: "深层方法",
+      items: [{ id: 29, domain: "深层方法", isReverse: true }],
+    },
+    {
+      title: "表层动机",
+      items: [{ id: 41, domain: "表层动机", isReverse: true }],
+    },
+    {
+      title: "表层方法",
+      items: [{ id: 42, domain: "表层方法", isReverse: false }],
+    },
+  ];
+
+  // 构建学习力展示行（同一 UI/格式 + isReverse 判定）
+  const learningSections = LEARNING_SECTIONS.map((section) => {
+    const rows = section.items.map((it) => {
+      const bank = LEARNING_QUESTION_BANK[it.id];
+      const zh = bank?.text ?? `学习力题 ${it.id}`;
+      const en = bank?.en ?? "";
+      const dbKey = `q${it.id}`;
+      const v = record.answers[dbKey];
+      const value = typeof v === "number" ? v : null;
+      const flagged =
+        value !== null && ((it.isReverse ? value > 5 : value < 5) as boolean);
+      return {
+        id: it.id,
+        dbKey,
+        domain: it.domain,
+        isReverse: it.isReverse,
+        zh,
+        en,
+        value,
+        flagged,
+      };
+    });
+    return { title: section.title, rows };
+  });
+
   return (
     <ModalShell
       title={`${record.name} · 快速查看`}
@@ -492,6 +557,66 @@ function QuickViewModal({
             })}
           </div>
         </div>
+
+        {/* 学习力：自驱力 / 深层动机 / 深层方法 / 表层动机 / 表层方法（题目与 survey-data.ts 精确匹配） */}
+        {learningSections.map((section) => (
+          <div key={section.title} className="rounded-2xl bg-amber-50/30 p-5">
+            <p className="mb-3 text-sm font-semibold text-amber-800">
+              {section.title}（学习力 1–10 分制）
+            </p>
+            <div className="space-y-2">
+              {section.rows.map((c) => {
+                return (
+                  <div
+                    key={c.id}
+                    className={`flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 ${
+                      c.flagged
+                        ? "bg-rose-50 ring-1 ring-rose-200"
+                        : "bg-white ring-1 ring-amber-100"
+                    }`}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="shrink-0 rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-medium text-amber-800">
+                          学习力题 #{c.id}
+                        </span>
+                        {c.domain && (
+                          <span className="text-[11px] font-medium text-slate-500">
+                            {c.domain}
+                          </span>
+                        )}
+                        {c.isReverse && (
+                          <span className="text-[11px] font-medium text-slate-400">
+                            反向题
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-1 text-sm text-slate-800">{c.zh}</div>
+                      {c.en && <div className="mt-1 text-xs text-slate-500">{c.en}</div>}
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <div
+                        className={`text-lg font-bold tabular-nums ${
+                          c.flagged ? "text-rose-600" : "text-slate-700"
+                        }`}
+                      >
+                        {c.value !== null && c.value !== undefined ? c.value : "—"}
+                        <span className="ml-0.5 text-xs font-normal text-slate-400">
+                          /10
+                        </span>
+                      </div>
+                      {c.flagged && (
+                        <div className="text-[11px] font-medium text-rose-600">
+                          需关注
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
     </ModalShell>
   );
