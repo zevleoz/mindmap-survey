@@ -27,13 +27,14 @@ model Student {
 // 90 道题独立列（q1..q90），分数为 1-10 或 1-5 的整数
 // q1..q60 = 学习力，q61..q90 = 学业压力
 model Response {
-  id        String   @id @default(uuid())
-  studentId String
-  student   Student  @relation(fields: [studentId], references: [id])
+  id              String   @id @default(uuid())
+  studentId       String
+  student         Student  @relation(fields: [studentId], references: [id])
+  isDraft         Boolean  @default(false)
   // 学习力 10 个维度的综合得分（便于前端直接渲染百分比）
-  dimensionScores  String? // JSON: { "思维模式": 85, ... }
-  pressureScores   String? // JSON: { "学业负担": 3.2, ... }
-  mindsetLabel     String?
+  dimensionScores String?  // JSON: { "思维模式": 85, ... }
+  pressureScores  String?  // JSON: { "学业负担": 3.2, ... }
+  mindsetLabel    String?
   q1        Int?
   q2        Int?
   q3        Int?
@@ -124,5 +125,6 @@ model Response {
   q88       Int?
   q89       Int?
   q90       Int?
-  createdAt DateTime @default(now())
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime? @updatedAt
 }

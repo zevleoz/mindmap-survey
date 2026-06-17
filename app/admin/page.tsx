@@ -45,6 +45,10 @@ interface NormalizedRecord {
   school: string | null;
   gender: string | null;
   createdAt: string;
+  isDraft?: boolean;
+  totalAnswered?: number;
+  learningAnswered?: number;
+  pressureAnswered?: number;
   answers: Record<string, number | undefined>;
   average10: Record<Dimension, number>;
   percent: Record<Dimension, number>;
@@ -144,6 +148,12 @@ function normalize(raw: unknown): NormalizedRecord | null {
     gender: typeof obj.gender === "string" ? obj.gender : null,
     createdAt:
       typeof obj.createdAt === "string" ? obj.createdAt : new Date().toISOString(),
+    isDraft: obj.isDraft === true,
+    totalAnswered: typeof obj.totalAnswered === "number" ? obj.totalAnswered : undefined,
+    learningAnswered:
+      typeof obj.learningAnswered === "number" ? obj.learningAnswered : undefined,
+    pressureAnswered:
+      typeof obj.pressureAnswered === "number" ? obj.pressureAnswered : undefined,
     answers,
     average10,
     percent,
@@ -759,7 +769,23 @@ export default function AdminPage() {
                   {filtered.map((r) => (
                     <tr key={r.id} className="hover:bg-amber-50/30">
                       <td className="px-4 py-4 font-medium text-slate-800 sm:px-5">
-                        {r.name}
+                        <div className="flex items-center gap-2">
+                          <span>{r.name}</span>
+                          {r.isDraft ? (
+                            <span
+                              className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800"
+                              title={`未完成：学习力 ${r.learningAnswered ?? 0}/60 · 学业压力 ${r.pressureAnswered ?? 0}/30`}
+                            >
+                              <span className="size-1.5 rounded-full bg-amber-600" />
+                              未完成 · {r.totalAnswered ?? 0}/90
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                              <span className="size-1.5 rounded-full bg-emerald-500" />
+                              已完成
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-4 sm:px-5">{r.age ?? "—"}</td>
                       <td className="max-w-[220px] truncate px-4 py-4 text-slate-600 sm:px-5">

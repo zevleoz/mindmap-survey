@@ -83,6 +83,17 @@ export async function GET() {
         if (typeof v === "number") raw[key] = v;
       }
 
+      // 1b) 简单的完成度计数（用于 admin 可视化）
+      let learningAnswered = 0;
+      for (let i = 1; i <= 60; i++) if (typeof raw[`q${i}`] === "number") learningAnswered++;
+      let pressureAnswered = 0;
+      for (let i = 61; i <= 90; i++) if (typeof raw[`q${i}`] === "number") pressureAnswered++;
+      const totalAnswered = learningAnswered + pressureAnswered;
+      const isDraft =
+        (r as unknown as { isDraft?: boolean | null }).isDraft === true ||
+        learningAnswered < 60 ||
+        pressureAnswered < 30;
+
       // 2) 维度得分：优先使用存储的 JSON；若缺失则基于 q1..q90 重算
       let percent = safeParseJSON<Record<string, number>>(
         (r as unknown as { dimensionScores?: string | null }).dimensionScores,
@@ -137,6 +148,10 @@ export async function GET() {
         school: r.student.school,
         gender: r.student.gender,
         createdAt: r.createdAt.toISOString(),
+        isDraft,
+        totalAnswered,
+        learningAnswered,
+        pressureAnswered,
         answers: raw,
         average10,
         percent,
