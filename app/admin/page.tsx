@@ -957,6 +957,32 @@ export default function AdminPage() {
                             <Download className="size-4" />
                             {downloadingId === r.id ? "下载中…" : "下载 PDF 报告"}
                           </button>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (
+                                !window.confirm(
+                                  `确认删除「${r.name}」的测评记录？此操作不可恢复。`
+                                )
+                              )
+                                return;
+                              try {
+                                const res = await fetch(`/api/responses/${r.id}`, {
+                                  method: "DELETE",
+                                });
+                                if (!res.ok) throw new Error("Delete failed");
+                                setRecords((prev) =>
+                                  prev.filter((x) => x.id !== r.id)
+                                );
+                              } catch (e) {
+                                console.error(e);
+                                alert("删除失败，请稍后重试");
+                              }
+                            }}
+                            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-rose-200 bg-white px-3 text-sm font-medium text-rose-700 transition hover:bg-rose-50"
+                          >
+                            删除
+                          </button>
                         </div>
                       </td>
                     </tr>
