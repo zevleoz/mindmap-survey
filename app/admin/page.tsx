@@ -361,12 +361,15 @@ function QuickViewModal({
       ],
     },
     {
-      title: "深层方法",
-      items: [{ id: 29, domain: "深层方法", isReverse: true }],
+      title: "学习方法",
+      items: [
+        { id: 29, domain: "学习方法", isReverse: true },
+        { id: 41, domain: "学习方法", isReverse: true },
+      ],
     },
     {
       title: "表层动机",
-      items: [{ id: 41, domain: "表层动机", isReverse: true }],
+      items: [],
     },
     {
       title: "表层方法",
@@ -558,8 +561,10 @@ function QuickViewModal({
           </div>
         </div>
 
-        {/* 学习力：自驱力 / 深层动机 / 深层方法 / 表层动机 / 表层方法（题目与 survey-data.ts 精确匹配） */}
-        {learningSections.map((section) => (
+        {/* 学习力：自驱力 / 深层动机 / 学习方法 / 表层方法（题目与 survey-data.ts 精确匹配） */}
+        {learningSections
+          .filter((section) => section.rows.length > 0)
+          .map((section) => (
           <div key={section.title} className="rounded-2xl bg-amber-50/30 p-5">
             <p className="mb-3 text-sm font-semibold text-amber-800">
               {section.title}（学习力 1–10 分制）
