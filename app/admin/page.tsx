@@ -2,18 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { Download, Eye, FileText, LogOut, Lock, X } from "lucide-react";
+import { Download, Eye, FileText, LogOut, Lock, X, Users, User } from "lucide-react";
 
 import { PdfTemplate } from "@/components/survey/pdf-template";
 import {
   LEARNING_QUESTION_BANK,
   PRESSURE_QUESTIONS,
+  FAMILY_VALUES,
+  FAMILY_HIGHER_ORDER,
   type Dimension,
   type PressureDimension,
 } from "@/lib/survey-data";
 
-// ============ 常量 ============
 const ADMIN_PASSWORD = "appark2026";
+
+type SurveyType = "student" | "family";
 
 const LEARNING_DIM_GROUPS: {
   title: string;
@@ -49,6 +52,7 @@ interface NormalizedRecord {
   age: number | null;
   school: string | null;
   gender: string | null;
+  childName?: string | null;
   createdAt: string;
   isDraft?: boolean;
   totalAnswered?: number;
@@ -60,6 +64,10 @@ interface NormalizedRecord {
   pressure: Record<PressureDimension, number>;
   mindsetLabel: "成长型思维" | "固定型思维";
   criticalQuestions: CriticalAnswer[];
+  valueScores?: Record<string, number>;
+  higherOrderScores?: Record<string, number>;
+  centeredScores?: Record<string, number>;
+  personalMean?: number;
 }
 
 function formatDate(iso: string) {
@@ -80,7 +88,7 @@ function toNumber(v: unknown, fallback = 0): number {
   return typeof v === "number" && !Number.isNaN(v) ? v : fallback;
 }
 
-function normalize(raw: unknown): NormalizedRecord | null {
+function normalize(raw: unknown, type: SurveyType): NormalizedRecord | null {
   if (!raw || typeof raw !== "object") return null;
   const obj = raw as Record<string, unknown>;
   if (typeof obj.id !== "string") return null;
@@ -106,7 +114,6 @@ function normalize(raw: unknown): NormalizedRecord | null {
       if (typeof v === "number") average10[k as Dimension] = v;
     }
   }
-  // 若 API 未返回 average10，则从 percent 反推
   if (Object.keys(average10).length === 0) {
     for (const [k, v] of Object.entries(percent)) {
       average10[k as Dimension] = Math.round((v / 10) * 10) / 10;
@@ -145,30 +152,46 @@ function normalize(raw: unknown): NormalizedRecord | null {
         .filter((x): x is CriticalAnswer => x !== null)
     : [];
 
+  const valueScores: Record<string, number> | undefined =
+    obj.valueScores && typeof obj.valueScores === "object"
+      ? (obj.valueScores as Record<string, number>)
+      : undefined;
+
+  const higherOrderScores: Record<string, number> | undefined =
+    obj.higherOrderScores && typeof obj.higherOrderScores === "object"
+      ? (obj.higherOrderScores as Record<string, number>)
+      : undefined;
+
+  const centeredScores: Record<string, number> | undefined =
+    obj.centeredScores && typeof obj.centeredScores === "object"
+      ? (obj.centeredScores as Record<string, number>)
+      : undefined;
+
   return {
     id: obj.id,
     name: obj.name,
     age: typeof obj.age === "number" ? obj.age : null,
     school: typeof obj.school === "string" ? obj.school : null,
     gender: typeof obj.gender === "string" ? obj.gender : null,
-    createdAt:
-      typeof obj.createdAt === "string" ? obj.createdAt : new Date().toISOString(),
+    childName: typeof obj.childName === "string" ? obj.childName : null,
+    createdAt: typeof obj.createdAt === "string" ? obj.createdAt : new Date().toISOString(),
     isDraft: obj.isDraft === true,
     totalAnswered: typeof obj.totalAnswered === "number" ? obj.totalAnswered : undefined,
-    learningAnswered:
-      typeof obj.learningAnswered === "number" ? obj.learningAnswered : undefined,
-    pressureAnswered:
-      typeof obj.pressureAnswered === "number" ? obj.pressureAnswered : undefined,
+    learningAnswered: typeof obj.learningAnswered === "number" ? obj.learningAnswered : undefined,
+    pressureAnswered: typeof obj.pressureAnswered === "number" ? obj.pressureAnswered : undefined,
     answers,
     average10,
     percent,
     pressure,
     mindsetLabel,
     criticalQuestions,
+    valueScores,
+    higherOrderScores,
+    centeredScores,
+    personalMean: typeof obj.personalMean === "number" ? obj.personalMean : undefined,
   };
 }
 
-// ============ 压力题 10 道关键题（与 api/admin/route.ts 保持一致）============
 const CRITICAL_QUESTIONS_TOPIC: { id: number; domain: string; text: string }[] = [
   { id: 1, domain: "学业负担", text: "我感觉学校作业负担很重" },
   { id: 5, domain: "学业负担", text: "学业占用了我大部分时间" },
@@ -182,7 +205,6 @@ const CRITICAL_QUESTIONS_TOPIC: { id: number; domain: string; text: string }[] =
   { id: 30, domain: "身心困扰", text: "压力大时我会想哭/崩溃" },
 ];
 
-// ============ PDF 下载逻辑（复用 PdfTemplate） ============
 async function downloadPDF(record: NormalizedRecord) {
   const [html2canvasMod, jsPDFMod] = await Promise.all([
     import("html2canvas"),
@@ -218,9 +240,7 @@ async function downloadPDF(record: NormalizedRecord) {
 
   try {
     await new Promise((r) => setTimeout(r, 400));
-    const templateEl = container.querySelector(
-      "[data-pdf-template]"
-    ) as HTMLElement | null;
+    const templateEl = container.querySelector("[data-pdf-template]") as HTMLElement | null;
     if (!templateEl) throw new Error("PDF 模板未渲染");
 
     const canvas = await html2canvas(templateEl, {
@@ -258,7 +278,6 @@ async function downloadPDF(record: NormalizedRecord) {
   }
 }
 
-// ============ 模态框 shell（统一 esc + 禁止 body 滚动） ============
 function ModalShell({
   title,
   subtitle,
@@ -318,8 +337,7 @@ function ModalShell({
   );
 }
 
-// ============ 快速查看弹窗（思维模式% + 9维度10分制 + 压力 + 10关键题） ============
-function QuickViewModal({
+function StudentQuickViewModal({
   record,
   onClose,
 }: {
@@ -332,16 +350,9 @@ function QuickViewModal({
       ? record.criticalQuestions
       : CRITICAL_QUESTIONS_TOPIC.map((q) => {
           const v = record.answers[`q${60 + q.id}`];
-          return {
-            ...q,
-            value: typeof v === "number" ? v : null,
-            dbKey: `q${60 + q.id}`,
-          };
+          return { ...q, value: typeof v === "number" ? v : null, dbKey: `q${60 + q.id}` };
         });
 
-  // 学习力：自驱力（2 题）、深层动机（2 题）、深层方法（1 题）、表层动机（1 题）、表层方法（1 题）
-  // 题号与方向全部来自 survey-data.ts 的计分规则（score10(id, isReverse)）
-  // 判定：正向题 > 5 为需关注；反向题 < 5 为需关注
   const LEARNING_SECTIONS: {
     title: string;
     items: { id: number; domain: string; isReverse: boolean }[];
@@ -367,17 +378,10 @@ function QuickViewModal({
         { id: 41, domain: "学习方法", isReverse: true },
       ],
     },
-    {
-      title: "表层动机",
-      items: [],
-    },
-    {
-      title: "表层方法",
-      items: [{ id: 42, domain: "表层方法", isReverse: false }],
-    },
+    { title: "表层动机", items: [] },
+    { title: "表层方法", items: [{ id: 42, domain: "表层方法", isReverse: false }] },
   ];
 
-  // 构建学习力展示行（同一 UI/格式 + isReverse 判定）
   const learningSections = LEARNING_SECTIONS.map((section) => {
     const rows = section.items.map((it) => {
       const bank = LEARNING_QUESTION_BANK[it.id];
@@ -386,18 +390,8 @@ function QuickViewModal({
       const dbKey = `q${it.id}`;
       const v = record.answers[dbKey];
       const value = typeof v === "number" ? v : null;
-      const flagged =
-        value !== null && ((it.isReverse ? value > 5 : value < 5) as boolean);
-      return {
-        id: it.id,
-        dbKey,
-        domain: it.domain,
-        isReverse: it.isReverse,
-        zh,
-        en,
-        value,
-        flagged,
-      };
+      const flagged = value !== null && ((it.isReverse ? value > 5 : value < 5) as boolean);
+      return { id: it.id, dbKey, domain: it.domain, isReverse: it.isReverse, zh, en, value, flagged };
     });
     return { title: section.title, rows };
   });
@@ -412,7 +406,6 @@ function QuickViewModal({
       onClose={onClose}
     >
       <div className="space-y-5">
-        {/* 思维模式（百分比） */}
         <div className="rounded-2xl bg-amber-50/50 p-5">
           <p className="mb-3 text-sm font-semibold text-amber-800">思维模式</p>
           <div className="flex items-center gap-4">
@@ -424,9 +417,7 @@ function QuickViewModal({
               <div className="h-2.5 w-full overflow-hidden rounded-full bg-amber-100">
                 <div
                   className="h-full rounded-full bg-amber-700 transition-all duration-700"
-                  style={{
-                    width: `${Math.max(0, Math.min(100, thinkingPct))}%`,
-                  }}
+                  style={{ width: `${Math.max(0, Math.min(100, thinkingPct))}%` }}
                 />
               </div>
               <p className="mt-2 text-sm text-slate-600">{record.mindsetLabel}</p>
@@ -434,7 +425,6 @@ function QuickViewModal({
           </div>
         </div>
 
-        {/* 其他 9 维度（10 分制，分 3 组） */}
         {LEARNING_DIM_GROUPS.map((group) => (
           <div key={group.title} className="rounded-2xl bg-amber-50/30 p-5">
             <p className="mb-3 text-sm font-semibold text-amber-800">{group.title}</p>
@@ -443,25 +433,17 @@ function QuickViewModal({
                 const avg = toNumber(record.average10[dim], 0);
                 const pct = toNumber(record.percent[dim], 0);
                 return (
-                  <div
-                    key={dim}
-                    className="flex items-center justify-between gap-3 rounded-xl bg-white p-4 ring-1 ring-amber-100"
-                  >
+                  <div key={dim} className="flex items-center justify-between gap-3 rounded-xl bg-white p-4 ring-1 ring-amber-100">
                     <div>
                       <p className="text-sm font-medium text-slate-800">{dim}</p>
                       <div className="mt-2 h-1.5 w-24 overflow-hidden rounded-full bg-amber-100 sm:w-32">
-                        <div
-                          className="h-full rounded-full bg-amber-700"
-                          style={{ width: `${Math.max(0, Math.min(100, pct))}%` }}
-                        />
+                        <div className="h-full rounded-full bg-amber-700" style={{ width: `${Math.max(0, Math.min(100, pct))}%` }} />
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="text-2xl font-bold tabular-nums text-amber-800">
                         {avg.toFixed(1)}
-                        <span className="ml-0.5 text-sm font-medium text-amber-600">
-                          /10
-                        </span>
+                        <span className="ml-0.5 text-sm font-medium text-amber-600">/10</span>
                       </p>
                     </div>
                   </div>
@@ -471,32 +453,18 @@ function QuickViewModal({
           </div>
         ))}
 
-        {/* 学业压力 5 维度 */}
         <div className="rounded-2xl bg-amber-50/30 p-5">
-          <p className="mb-3 text-sm font-semibold text-amber-800">
-            学业压力 · 5 维度（满分 5 分）
-          </p>
+          <p className="mb-3 text-sm font-semibold text-amber-800">学业压力 · 5 维度（满分 5 分）</p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             {PRESSURE_DIMS.map((dim) => {
               const v = toNumber(record.pressure[dim], 0);
               const isHigh = v >= 3;
               return (
-                <div
-                  key={dim}
-                  className={`rounded-xl p-4 text-center ring-1 ${
-                    isHigh ? "bg-rose-50 ring-rose-200" : "bg-white ring-amber-100"
-                  }`}
-                >
+                <div key={dim} className={`rounded-xl p-4 text-center ring-1 ${isHigh ? "bg-rose-50 ring-rose-200" : "bg-white ring-amber-100"}`}>
                   <p className="text-sm font-medium text-slate-600">{dim}</p>
-                  <p
-                    className={`mt-1 text-2xl font-bold tabular-nums ${
-                      isHigh ? "text-rose-600" : "text-emerald-700"
-                    }`}
-                  >
+                  <p className={`mt-1 text-2xl font-bold tabular-nums ${isHigh ? "text-rose-600" : "text-emerald-700"}`}>
                     {v.toFixed(1)}
-                    <span className="ml-0.5 text-sm font-medium text-slate-400">
-                      /5
-                    </span>
+                    <span className="ml-0.5 text-sm font-medium text-slate-400">/5</span>
                   </p>
                 </div>
               );
@@ -504,11 +472,8 @@ function QuickViewModal({
           </div>
         </div>
 
-        {/* 10 道关键题 */}
         <div className="rounded-2xl bg-amber-50/30 p-5">
-          <p className="mb-3 text-sm font-semibold text-amber-800">
-            压力 · 10 道关键题（得分大于 3 建议特别关注）
-          </p>
+          <p className="mb-3 text-sm font-semibold text-amber-800">压力 · 10 道关键题（得分大于 3 建议特别关注）</p>
           <div className="space-y-2">
             {criticalQs.map((c) => {
               const isHigh = c.value !== null && c.value !== undefined && c.value > 3;
@@ -516,44 +481,21 @@ function QuickViewModal({
               const zh = bankQ?.text?.trim() ?? "";
               const en = bankQ?.en?.trim() ?? "";
               return (
-                <div
-                  key={c.id}
-                  className={`flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 ${
-                    isHigh
-                      ? "bg-rose-50 ring-1 ring-rose-200"
-                      : "bg-white ring-1 ring-amber-100"
-                  }`}
-                >
+                <div key={c.id} className={`flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 ${isHigh ? "bg-rose-50 ring-1 ring-rose-200" : "bg-white ring-1 ring-amber-100"}`}>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="shrink-0 rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-medium text-amber-800">
-                        压力题 #{c.id}
-                      </span>
-                      {c.domain && (
-                        <span className="text-[11px] font-medium text-slate-500">
-                          {c.domain}
-                        </span>
-                      )}
+                      <span className="shrink-0 rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-medium text-amber-800">压力题 #{c.id}</span>
+                      {c.domain && <span className="text-[11px] font-medium text-slate-500">{c.domain}</span>}
                     </div>
                     <div className="mt-1 text-sm text-slate-800">{zh}</div>
                     {en && <div className="mt-1 text-xs text-slate-500">{en}</div>}
                   </div>
                   <div className="shrink-0 text-right">
-                    <div
-                      className={`text-lg font-bold tabular-nums ${
-                        isHigh ? "text-rose-600" : "text-slate-700"
-                      }`}
-                    >
+                    <div className={`text-lg font-bold tabular-nums ${isHigh ? "text-rose-600" : "text-slate-700"}`}>
                       {c.value !== null && c.value !== undefined ? c.value : "—"}
-                      <span className="ml-0.5 text-xs font-normal text-slate-400">
-                        /5
-                      </span>
+                      <span className="ml-0.5 text-xs font-normal text-slate-400">/5</span>
                     </div>
-                    {isHigh && (
-                      <div className="text-[11px] font-medium text-rose-600">
-                        高风险 · 需关注
-                      </div>
-                    )}
+                    {isHigh && <div className="text-[11px] font-medium text-rose-600">高风险 · 需关注</div>}
                   </div>
                 </div>
               );
@@ -561,64 +503,32 @@ function QuickViewModal({
           </div>
         </div>
 
-        {/* 学习力：自驱力 / 深层动机 / 学习方法 / 表层方法（题目与 survey-data.ts 精确匹配） */}
         {learningSections
           .filter((section) => section.rows.length > 0)
           .map((section) => (
           <div key={section.title} className="rounded-2xl bg-amber-50/30 p-5">
-            <p className="mb-3 text-sm font-semibold text-amber-800">
-              {section.title}（学习力 1–10 分制）
-            </p>
+            <p className="mb-3 text-sm font-semibold text-amber-800">{section.title}（学习力 1–10 分制）</p>
             <div className="space-y-2">
-              {section.rows.map((c) => {
-                return (
-                  <div
-                    key={c.id}
-                    className={`flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 ${
-                      c.flagged
-                        ? "bg-rose-50 ring-1 ring-rose-200"
-                        : "bg-white ring-1 ring-amber-100"
-                    }`}
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="shrink-0 rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-medium text-amber-800">
-                          学习力题 #{c.id}
-                        </span>
-                        {c.domain && (
-                          <span className="text-[11px] font-medium text-slate-500">
-                            {c.domain}
-                          </span>
-                        )}
-                        {c.isReverse && (
-                          <span className="text-[11px] font-medium text-slate-400">
-                            反向题
-                          </span>
-                        )}
-                      </div>
-                      <div className="mt-1 text-sm text-slate-800">{c.zh}</div>
-                      {c.en && <div className="mt-1 text-xs text-slate-500">{c.en}</div>}
+              {section.rows.map((c) => (
+                <div key={c.id} className={`flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 ${c.flagged ? "bg-rose-50 ring-1 ring-rose-200" : "bg-white ring-1 ring-amber-100"}`}>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="shrink-0 rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-medium text-amber-800">学习力题 #{c.id}</span>
+                      {c.domain && <span className="text-[11px] font-medium text-slate-500">{c.domain}</span>}
+                      {c.isReverse && <span className="text-[11px] font-medium text-slate-400">反向题</span>}
                     </div>
-                    <div className="shrink-0 text-right">
-                      <div
-                        className={`text-lg font-bold tabular-nums ${
-                          c.flagged ? "text-rose-600" : "text-slate-700"
-                        }`}
-                      >
-                        {c.value !== null && c.value !== undefined ? c.value : "—"}
-                        <span className="ml-0.5 text-xs font-normal text-slate-400">
-                          /10
-                        </span>
-                      </div>
-                      {c.flagged && (
-                        <div className="text-[11px] font-medium text-rose-600">
-                          需关注
-                        </div>
-                      )}
-                    </div>
+                    <div className="mt-1 text-sm text-slate-800">{c.zh}</div>
+                    {c.en && <div className="mt-1 text-xs text-slate-500">{c.en}</div>}
                   </div>
-                );
-              })}
+                  <div className="shrink-0 text-right">
+                    <div className={`text-lg font-bold tabular-nums ${c.flagged ? "text-rose-600" : "text-slate-700"}`}>
+                      {c.value !== null && c.value !== undefined ? c.value : "—"}
+                      <span className="ml-0.5 text-xs font-normal text-slate-400">/10</span>
+                    </div>
+                    {c.flagged && <div className="text-[11px] font-medium text-rose-600">需关注</div>}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         ))}
@@ -627,7 +537,140 @@ function QuickViewModal({
   );
 }
 
-// ============ 查看报告弹窗（完整 PdfTemplate） ============
+function FamilyQuickViewModal({
+  record,
+  onClose,
+}: {
+  record: NormalizedRecord;
+  onClose: () => void;
+}) {
+  const valueScores = record.valueScores ?? {};
+  const centeredScores = record.centeredScores ?? {};
+  const higherOrderScores = record.higherOrderScores ?? {};
+  const personalMean = record.personalMean ?? 0;
+
+  const getPriorityLevel = (score: number): { label: string; color: string } => {
+    if (score >= 0.5) return { label: "相对核心价值", color: "bg-emerald-100 text-emerald-700" };
+    if (score >= 0.2) return { label: "相对较高优先", color: "bg-amber-100 text-amber-700" };
+    if (score >= -0.19) return { label: "处于中间位置", color: "bg-slate-100 text-slate-600" };
+    if (score >= -0.49) return { label: "相对较低优先", color: "bg-orange-100 text-orange-700" };
+    return { label: "明显非优先价值", color: "bg-rose-100 text-rose-700" };
+  };
+
+  return (
+    <ModalShell
+      title={`${record.name} · 快速查看`}
+      subtitle={
+        (record.school ? `${record.school} · ` : "") +
+        `${record.gender ?? "—"}${record.age ? ` · ${record.age}岁` : ""}${record.childName ? ` · 孩子：${record.childName}` : ""} · 提交时间 ${formatDate(record.createdAt)}`
+      }
+      onClose={onClose}
+    >
+      <div className="space-y-5">
+        <div className="rounded-2xl bg-amber-50/50 p-5">
+          <p className="mb-3 text-sm font-semibold text-amber-800">个人总均分（1–6 分）</p>
+          <div className="flex items-center gap-4">
+            <div className="text-4xl font-bold tabular-nums text-amber-800">
+              {personalMean.toFixed(1)}
+              <span className="ml-1 text-lg font-medium text-amber-700">/6</span>
+            </div>
+            <div className="flex-1">
+              <div className="h-2.5 w-full overflow-hidden rounded-full bg-amber-100">
+                <div
+                  className="h-full rounded-full bg-amber-700 transition-all duration-700"
+                  style={{ width: `${(personalMean / 6) * 100}%` }}
+                />
+              </div>
+              <p className="mt-2 text-sm text-slate-600">反映填写者整体偏向使用高分还是低分</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl bg-amber-50/30 p-5">
+          <p className="mb-3 text-sm font-semibold text-amber-800">10 个基本价值维度（原始分）</p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+            {FAMILY_VALUES.map((value) => {
+              const score = toNumber(valueScores[value], 0);
+              return (
+                <div key={value} className="rounded-xl bg-white p-3 text-center ring-1 ring-amber-100">
+                  <p className="text-xs font-medium text-slate-600">{value}</p>
+                  <p className="mt-1 text-xl font-bold tabular-nums text-amber-800">
+                    {score.toFixed(1)}
+                    <span className="ml-0.5 text-xs font-medium text-slate-400">/6</span>
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="rounded-2xl bg-amber-50/30 p-5">
+          <p className="mb-3 text-sm font-semibold text-amber-800">中心化相对优先级（原始分 - 个人总均分）</p>
+          <div className="space-y-3">
+            {FAMILY_VALUES.map((value) => {
+              const score = toNumber(centeredScores[value], 0);
+              const priority = getPriorityLevel(score);
+              const absScore = Math.abs(score);
+              const isPositive = score >= 0;
+              return (
+                <div key={value} className="flex items-center gap-3">
+                  <div className="w-16 text-sm font-medium text-slate-800">{value}</div>
+                  <div className="flex-1 h-6 rounded-lg bg-slate-100 overflow-hidden">
+                    <div
+                      className={`h-full transition-all duration-500 ${isPositive ? "bg-amber-700" : "bg-rose-500"}`}
+                      style={{
+                        width: `${Math.min(100, absScore * 100)}%`,
+                        marginLeft: isPositive ? 0 : `calc(${100 - Math.min(100, absScore * 100)}%)`,
+                      }}
+                    />
+                  </div>
+                  <div className="w-16 text-right">
+                    <span className={`text-sm font-bold tabular-nums ${isPositive ? "text-amber-700" : "text-rose-600"}`}>
+                      {isPositive ? "+" : ""}{score.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className={`shrink-0 rounded-md px-2 py-1 text-[11px] font-medium ${priority.color}`}>
+                    {priority.label}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="rounded-2xl bg-amber-50/30 p-5">
+          <p className="mb-3 text-sm font-semibold text-amber-800">4 个高阶价值方向</p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {FAMILY_HIGHER_ORDER.map((order) => {
+              const score = toNumber(higherOrderScores[order], 0);
+              const isPositive = score >= 0;
+              return (
+                <div key={order} className="rounded-xl bg-white p-4 ring-1 ring-amber-100">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-slate-800">{order}</span>
+                    <span className={`text-lg font-bold tabular-nums ${isPositive ? "text-amber-700" : "text-rose-600"}`}>
+                      {isPositive ? "+" : ""}{score.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                    <div
+                      className={`h-full transition-all duration-500 ${isPositive ? "bg-amber-700" : "bg-rose-500"}`}
+                      style={{
+                        width: `${Math.min(100, Math.abs(score) * 100)}%`,
+                        marginLeft: isPositive ? 0 : `calc(${100 - Math.min(100, Math.abs(score) * 100)}%)`,
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </ModalShell>
+  );
+}
+
 function ReportModal({
   record,
   onClose,
@@ -667,7 +710,6 @@ function ReportModal({
   );
 }
 
-// ============ 登录页 ============
 function LoginPage({
   onLogin,
   error,
@@ -690,10 +732,7 @@ function LoginPage({
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-[#FBF7F0] to-white p-5">
-      <form
-        onSubmit={submit}
-        className="w-full max-w-md rounded-[20px] bg-white p-8 shadow-[0_2px_8px_rgba(184,115,51,0.1)]"
-      >
+      <form onSubmit={submit} className="w-full max-w-md rounded-[20px] bg-white p-8 shadow-[0_2px_8px_rgba(184,115,51,0.1)]">
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
           <div className="flex size-14 items-center justify-center rounded-2xl bg-amber-700 shadow-lg shadow-amber-200">
             <Lock className="size-6 text-white" />
@@ -703,9 +742,7 @@ function LoginPage({
         </div>
         <div className="space-y-4">
           <div className="space-y-2">
-            <label htmlFor="admin-password" className="block text-sm font-medium text-slate-700">
-              密码
-            </label>
+            <label htmlFor="admin-password" className="block text-sm font-medium text-slate-700">密码</label>
             <input
               id="admin-password"
               type="password"
@@ -721,23 +758,16 @@ function LoginPage({
             />
             {error && <p className="text-sm text-rose-500">{error}</p>}
           </div>
-          <button
-            type="submit"
-            className="h-12 w-full rounded-2xl bg-amber-700 text-base font-semibold text-white transition hover:bg-amber-800"
-          >
-            登录
-          </button>
+          <button type="submit" className="h-12 w-full rounded-2xl bg-amber-700 text-base font-semibold text-white transition hover:bg-amber-800">登录</button>
         </div>
       </form>
     </div>
   );
 }
 
-// ============ 管理面板主页面 ============
-// 关键点：SSR 与 CSR 首次渲染都返回登录页（无 window/sessionStorage 依赖），
-// 只有 useEffect 之后才切换到"已登录/加载数据"视图，从根本上消除 hydration 不一致。
 export default function AdminPage() {
   const [authed, setAuthed] = useState(false);
+  const [surveyType, setSurveyType] = useState<SurveyType>("student");
   const [records, setRecords] = useState<NormalizedRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState("");
@@ -747,7 +777,6 @@ export default function AdminPage() {
   const [reportView, setReportView] = useState<NormalizedRecord | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
-  // 1) 登录态初始化（只在客户端运行，SSR 保持 authed=false）
   useEffect(() => {
     try {
       if (window.sessionStorage.getItem("survey_admin_authed") === "1") {
@@ -758,7 +787,6 @@ export default function AdminPage() {
     }
   }, []);
 
-  // 2) 登录后拉取数据
   useEffect(() => {
     if (!authed) return;
     let cancelled = false;
@@ -766,11 +794,10 @@ export default function AdminPage() {
     setFetchError("");
     async function fetchRecords() {
       try {
-        const res = await fetch("/api/admin", { cache: "no-store" });
+        const url = surveyType === "student" ? "/api/admin" : "/api/family";
+        const res = await fetch(url, { cache: "no-store" });
         if (cancelled) return;
-        if (!res.ok) {
-          throw new Error("加载失败，请稍后重试");
-        }
+        if (!res.ok) throw new Error("加载失败，请稍后重试");
         const data = await res.json();
         const arr: unknown[] = Array.isArray(data?.records)
           ? data.records
@@ -779,39 +806,31 @@ export default function AdminPage() {
             : [];
         const normalized: NormalizedRecord[] = [];
         for (const item of arr) {
-          const rec = normalize(item);
+          const rec = normalize(item, surveyType);
           if (rec) normalized.push(rec);
         }
         if (!cancelled) setRecords(normalized);
       } catch (err) {
-        if (!cancelled) {
-          setFetchError(err instanceof Error ? err.message : "加载失败");
-        }
+        if (!cancelled) setFetchError(err instanceof Error ? err.message : "加载失败");
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
     fetchRecords();
-    return () => {
-      cancelled = true;
-    };
-  }, [authed]);
+    return () => { cancelled = true; };
+  }, [authed, surveyType]);
 
   const handleLogin = () => {
     try {
       window.sessionStorage.setItem("survey_admin_authed", "1");
-    } catch {
-      // ignore
-    }
+    } catch { /* ignore */ }
     setAuthed(true);
   };
 
   const handleLogout = () => {
     try {
       window.sessionStorage.removeItem("survey_admin_authed");
-    } catch {
-      // ignore
-    }
+    } catch { /* ignore */ }
     setAuthed(false);
     setRecords([]);
     setFetchError("");
@@ -819,15 +838,8 @@ export default function AdminPage() {
     setReportView(null);
   };
 
-  // SSR 与首次 CSR 都渲染登录页（确定性、无 window 依赖）
   if (!authed) {
-    return (
-      <LoginPage
-        onLogin={handleLogin}
-        error={loginError}
-        onErrorChange={setLoginError}
-      />
-    );
+    return <LoginPage onLogin={handleLogin} error={loginError} onErrorChange={setLoginError} />;
   }
 
   const q = query.trim().toLowerCase();
@@ -836,43 +848,62 @@ export default function AdminPage() {
         (r) =>
           r.name.toLowerCase().includes(q) ||
           (r.school && r.school.toLowerCase().includes(q)) ||
-          (r.gender && String(r.gender).toLowerCase().includes(q))
+          (r.gender && String(r.gender).toLowerCase().includes(q)) ||
+          (r.childName && r.childName.toLowerCase().includes(q))
       )
     : records;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FBF7F0] to-white">
       <div className="mx-auto max-w-[1200px] space-y-6 px-4 py-6 sm:px-5 sm:py-8">
-        {/* 标题 + 操作栏 */}
         <div className="flex flex-col gap-4 rounded-[20px] bg-white p-5 shadow-[0_2px_8px_rgba(184,115,51,0.08)] sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <div>
-            <h1 className="text-xl font-bold text-amber-800 sm:text-2xl">
-              测评管理后台
-            </h1>
+            <h1 className="text-xl font-bold text-amber-800 sm:text-2xl">测评管理后台</h1>
             <p className="mt-1 text-sm text-slate-500">
-              查看所有学生的测评记录 · 共 {records.length} 条
+              查看所有{surveyType === "student" ? "学生" : "家长"}的测评记录 · 共 {records.length} 条
             </p>
           </div>
-          <div className="flex shrink-0 flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+          <div className="flex shrink-0 flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+            <div className="flex rounded-xl border border-amber-200 p-1 bg-amber-50/40">
+              <button
+                type="button"
+                onClick={() => { setSurveyType("student"); setQuery(""); }}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${
+                  surveyType === "student"
+                    ? "bg-amber-700 text-white"
+                    : "text-amber-800 hover:bg-amber-100"
+                }`}
+              >
+                <User className="size-4" />
+                学生测评
+              </button>
+              <button
+                type="button"
+                onClick={() => { setSurveyType("family"); setQuery(""); }}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${
+                  surveyType === "family"
+                    ? "bg-amber-700 text-white"
+                    : "text-amber-800 hover:bg-amber-100"
+                }`}
+              >
+                <Users className="size-4" />
+                家长测评
+              </button>
+            </div>
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="搜索（姓名 / 学校 / 性别）"
+              placeholder={`搜索（姓名 / 学校 / ${surveyType === "family" ? "孩子姓名" : "性别"}）`}
               className="h-11 w-full rounded-xl border border-slate-200 bg-amber-50/40 px-4 text-sm text-slate-800 outline-none focus:border-amber-700 focus:ring-2 focus:ring-amber-700/20 sm:w-64"
             />
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-amber-200 px-4 text-sm font-medium text-amber-800 transition hover:bg-amber-50"
-            >
+            <button type="button" onClick={handleLogout} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-amber-200 px-4 text-sm font-medium text-amber-800 transition hover:bg-amber-50">
               <LogOut className="size-4" />
               退出登录
             </button>
           </div>
         </div>
 
-        {/* 数据表格 */}
         <div className="overflow-hidden rounded-[20px] bg-white shadow-[0_2px_8px_rgba(184,115,51,0.08)]">
           {loading ? (
             <p className="py-16 text-center text-slate-500">加载中…</p>
@@ -881,13 +912,14 @@ export default function AdminPage() {
               <p className="text-rose-500">{fetchError}</p>
             </div>
           ) : filtered.length === 0 ? (
-            <p className="py-16 text-center text-slate-500">暂无测评记录</p>
+            <p className="py-16 text-center text-slate-500">暂无{surveyType === "student" ? "学生" : "家长"}测评记录</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[720px] border-collapse">
                 <thead>
                   <tr className="bg-amber-50/70 text-left text-sm text-amber-800">
                     <th className="px-4 py-3 font-semibold sm:px-5">姓名</th>
+                    {surveyType === "family" && <th className="px-4 py-3 font-semibold sm:px-5">孩子姓名</th>}
                     <th className="px-4 py-3 font-semibold sm:px-5">年龄</th>
                     <th className="px-4 py-3 font-semibold sm:px-5">学校</th>
                     <th className="px-4 py-3 font-semibold sm:px-5">性别</th>
@@ -902,12 +934,9 @@ export default function AdminPage() {
                         <div className="flex items-center gap-2">
                           <span>{r.name}</span>
                           {r.isDraft ? (
-                            <span
-                              className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800"
-                              title={`未完成：学习力 ${r.learningAnswered ?? 0}/60 · 学业压力 ${r.pressureAnswered ?? 0}/30`}
-                            >
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800" title={`未完成 · ${r.totalAnswered ?? 0}/${surveyType === "student" ? 90 : 30}`}>
                               <span className="size-1.5 rounded-full bg-amber-600" />
-                              未完成 · {r.totalAnswered ?? 0}/90
+                              未完成 · {r.totalAnswered ?? 0}/{surveyType === "student" ? 90 : 30}
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
@@ -917,14 +946,13 @@ export default function AdminPage() {
                           )}
                         </div>
                       </td>
+                      {surveyType === "family" && (
+                        <td className="px-4 py-4 text-slate-600 sm:px-5">{r.childName ?? "—"}</td>
+                      )}
                       <td className="px-4 py-4 sm:px-5">{r.age ?? "—"}</td>
-                      <td className="max-w-[220px] truncate px-4 py-4 text-slate-600 sm:px-5">
-                        {r.school ?? "—"}
-                      </td>
+                      <td className="max-w-[220px] truncate px-4 py-4 text-slate-600 sm:px-5">{r.school ?? "—"}</td>
                       <td className="px-4 py-4 sm:px-5">{r.gender ?? "—"}</td>
-                      <td className="px-4 py-4 text-slate-500 sm:px-5">
-                        {formatDate(r.createdAt)}
-                      </td>
+                      <td className="px-4 py-4 text-slate-500 sm:px-5">{formatDate(r.createdAt)}</td>
                       <td className="px-4 py-4 sm:px-5">
                         <div className="flex flex-wrap justify-end gap-2">
                           <button
@@ -935,50 +963,47 @@ export default function AdminPage() {
                             <Eye className="size-4" />
                             快速查看
                           </button>
+                          {surveyType === "student" && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => setReportView(r)}
+                                className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-amber-200 bg-white px-3 text-sm font-medium text-amber-800 transition hover:bg-amber-50"
+                              >
+                                <FileText className="size-4" />
+                                查看报告
+                              </button>
+                              <button
+                                type="button"
+                                disabled={downloadingId === r.id}
+                                onClick={async () => {
+                                  setDownloadingId(r.id);
+                                  try {
+                                    await downloadPDF(r);
+                                  } catch (e) {
+                                    console.error(e);
+                                    alert("下载失败，请稍后重试");
+                                  } finally {
+                                    setDownloadingId(null);
+                                  }
+                                }}
+                                className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+                              >
+                                <Download className="size-4" />
+                                {downloadingId === r.id ? "下载中…" : "下载 PDF 报告"}
+                              </button>
+                            </>
+                          )}
                           <button
                             type="button"
-                            onClick={() => setReportView(r)}
-                            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-amber-200 bg-white px-3 text-sm font-medium text-amber-800 transition hover:bg-amber-50"
-                          >
-                            <FileText className="size-4" />
-                            查看报告
-                          </button>
-                          <button
-                            type="button"
-                            disabled={downloadingId === r.id}
                             onClick={async () => {
-                              setDownloadingId(r.id);
+                              if (!window.confirm(`确认删除「${r.name}」的测评记录？此操作不可恢复。`)) return;
                               try {
-                                await downloadPDF(r);
-                              } catch (e) {
-                                console.error(e);
-                                alert("下载失败，请稍后重试");
-                              } finally {
-                                setDownloadingId(null);
-                              }
-                            }}
-                            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
-                          >
-                            <Download className="size-4" />
-                            {downloadingId === r.id ? "下载中…" : "下载 PDF 报告"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              if (
-                                !window.confirm(
-                                  `确认删除「${r.name}」的测评记录？此操作不可恢复。`
-                                )
-                              )
-                                return;
-                              try {
-                                const res = await fetch(`/api/responses/${r.id}`, {
-                                  method: "DELETE",
-                                });
+                                const url = surveyType === "student" ? `/api/responses/${r.id}` : `/api/family?id=${r.id}`;
+                                const method = surveyType === "student" ? "DELETE" : "DELETE";
+                                const res = await fetch(url, { method });
                                 if (!res.ok) throw new Error("Delete failed");
-                                setRecords((prev) =>
-                                  prev.filter((x) => x.id !== r.id)
-                                );
+                                setRecords((prev) => prev.filter((x) => x.id !== r.id));
                               } catch (e) {
                                 console.error(e);
                                 alert("删除失败，请稍后重试");
@@ -999,7 +1024,8 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {quickView && <QuickViewModal record={quickView} onClose={() => setQuickView(null)} />}
+      {quickView && surveyType === "student" && <StudentQuickViewModal record={quickView} onClose={() => setQuickView(null)} />}
+      {quickView && surveyType === "family" && <FamilyQuickViewModal record={quickView} onClose={() => setQuickView(null)} />}
       {reportView && <ReportModal record={reportView} onClose={() => setReportView(null)} />}
     </div>
   );

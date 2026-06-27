@@ -1,6 +1,6 @@
--- PostgreSQL：mindmap_survey 主迁移
--- 在 Vercel 上执行 `npx prisma migrate deploy` 时会运行
--- 或在本地开发/部署前使用 `npx prisma db push` 等效推进
+-- 基线迁移：基于数据库当前状态的完整结构
+-- 使用 IF NOT EXISTS 保证幂等性
+
 CREATE TABLE IF NOT EXISTS "Student" (
     "id" UUID NOT NULL,
     "name" TEXT NOT NULL,
@@ -108,11 +108,73 @@ CREATE TABLE IF NOT EXISTS "Response" (
     "q89" INTEGER,
     "q90" INTEGER,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "isDraft" BOOLEAN NOT NULL DEFAULT false,
+    "updatedAt" TIMESTAMP(3),
     CONSTRAINT "Response_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE IF NOT EXISTS "Parent" (
+    "id" UUID NOT NULL,
+    "name" TEXT NOT NULL,
+    "age" INTEGER,
+    "childName" TEXT,
+    "school" TEXT,
+    "gender" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "Parent_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE IF NOT EXISTS "FamilyResponse" (
+    "id" UUID NOT NULL,
+    "parentId" UUID NOT NULL,
+    "isDraft" BOOLEAN NOT NULL DEFAULT false,
+    "valueScores" TEXT,
+    "higherOrderScores" TEXT,
+    "centeredScores" TEXT,
+    "personalMean" DOUBLE PRECISION,
+    "fq1" INTEGER,
+    "fq2" INTEGER,
+    "fq3" INTEGER,
+    "fq4" INTEGER,
+    "fq5" INTEGER,
+    "fq6" INTEGER,
+    "fq7" INTEGER,
+    "fq8" INTEGER,
+    "fq9" INTEGER,
+    "fq10" INTEGER,
+    "fq11" INTEGER,
+    "fq12" INTEGER,
+    "fq13" INTEGER,
+    "fq14" INTEGER,
+    "fq15" INTEGER,
+    "fq16" INTEGER,
+    "fq17" INTEGER,
+    "fq18" INTEGER,
+    "fq19" INTEGER,
+    "fq20" INTEGER,
+    "fq21" INTEGER,
+    "fq22" INTEGER,
+    "fq23" INTEGER,
+    "fq24" INTEGER,
+    "fq25" INTEGER,
+    "fq26" INTEGER,
+    "fq27" INTEGER,
+    "fq28" INTEGER,
+    "fq29" INTEGER,
+    "fq30" INTEGER,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3),
+    CONSTRAINT "FamilyResponse_pkey" PRIMARY KEY ("id")
 );
 
 CREATE INDEX IF NOT EXISTS "Response_studentId_idx" ON "Response"("studentId");
 
+CREATE INDEX IF NOT EXISTS "FamilyResponse_parentId_idx" ON "FamilyResponse"("parentId");
+
 ALTER TABLE "Response" DROP CONSTRAINT IF EXISTS "Response_studentId_fkey";
 
 ALTER TABLE "Response" ADD CONSTRAINT "Response_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+ALTER TABLE "FamilyResponse" DROP CONSTRAINT IF EXISTS "FamilyResponse_parentId_fkey";
+
+ALTER TABLE "FamilyResponse" ADD CONSTRAINT "FamilyResponse_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "Parent"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

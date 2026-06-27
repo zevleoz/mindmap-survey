@@ -1,10 +1,3 @@
-// PostgreSQL schema: 用于 Vercel 生产部署
-// 切换步骤：
-//   1. 在 Vercel 控制台 Storage → Add Database → Postgres
-//   2. Environment Variables 中会自动注入 DATABASE_URL
-//   3. 终端执行：npx prisma migrate deploy --schema=./prisma/schema.prisma
-//   4. 重新部署
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -24,107 +17,158 @@ model Student {
   responses Response[]
 }
 
-// 90 道题独立列（q1..q90），分数为 1-10 或 1-5 的整数
-// q1..q60 = 学习力，q61..q90 = 学业压力
 model Response {
-  id              String   @id @default(uuid())
+  id              String    @id @default(uuid())
   studentId       String
-  student         Student  @relation(fields: [studentId], references: [id])
-  isDraft         Boolean  @default(false)
-  // 学习力 10 个维度的综合得分（便于前端直接渲染百分比）
-  dimensionScores String?  // JSON: { "思维模式": 85, ... }
-  pressureScores  String?  // JSON: { "学业负担": 3.2, ... }
+  dimensionScores String?
+  pressureScores  String?
   mindsetLabel    String?
-  q1        Int?
-  q2        Int?
-  q3        Int?
-  q4        Int?
-  q5        Int?
-  q6        Int?
-  q7        Int?
-  q8        Int?
-  q9        Int?
-  q10       Int?
-  q11       Int?
-  q12       Int?
-  q13       Int?
-  q14       Int?
-  q15       Int?
-  q16       Int?
-  q17       Int?
-  q18       Int?
-  q19       Int?
-  q20       Int?
-  q21       Int?
-  q22       Int?
-  q23       Int?
-  q24       Int?
-  q25       Int?
-  q26       Int?
-  q27       Int?
-  q28       Int?
-  q29       Int?
-  q30       Int?
-  q31       Int?
-  q32       Int?
-  q33       Int?
-  q34       Int?
-  q35       Int?
-  q36       Int?
-  q37       Int?
-  q38       Int?
-  q39       Int?
-  q40       Int?
-  q41       Int?
-  q42       Int?
-  q43       Int?
-  q44       Int?
-  q45       Int?
-  q46       Int?
-  q47       Int?
-  q48       Int?
-  q49       Int?
-  q50       Int?
-  q51       Int?
-  q52       Int?
-  q53       Int?
-  q54       Int?
-  q55       Int?
-  q56       Int?
-  q57       Int?
-  q58       Int?
-  q59       Int?
-  q60       Int?
-  q61       Int?
-  q62       Int?
-  q63       Int?
-  q64       Int?
-  q65       Int?
-  q66       Int?
-  q67       Int?
-  q68       Int?
-  q69       Int?
-  q70       Int?
-  q71       Int?
-  q72       Int?
-  q73       Int?
-  q74       Int?
-  q75       Int?
-  q76       Int?
-  q77       Int?
-  q78       Int?
-  q79       Int?
-  q80       Int?
-  q81       Int?
-  q82       Int?
-  q83       Int?
-  q84       Int?
-  q85       Int?
-  q86       Int?
-  q87       Int?
-  q88       Int?
-  q89       Int?
-  q90       Int?
+  q1              Int?
+  q2              Int?
+  q3              Int?
+  q4              Int?
+  q5              Int?
+  q6              Int?
+  q7              Int?
+  q8              Int?
+  q9              Int?
+  q10             Int?
+  q11             Int?
+  q12             Int?
+  q13             Int?
+  q14             Int?
+  q15             Int?
+  q16             Int?
+  q17             Int?
+  q18             Int?
+  q19             Int?
+  q20             Int?
+  q21             Int?
+  q22             Int?
+  q23             Int?
+  q24             Int?
+  q25             Int?
+  q26             Int?
+  q27             Int?
+  q28             Int?
+  q29             Int?
+  q30             Int?
+  q31             Int?
+  q32             Int?
+  q33             Int?
+  q34             Int?
+  q35             Int?
+  q36             Int?
+  q37             Int?
+  q38             Int?
+  q39             Int?
+  q40             Int?
+  q41             Int?
+  q42             Int?
+  q43             Int?
+  q44             Int?
+  q45             Int?
+  q46             Int?
+  q47             Int?
+  q48             Int?
+  q49             Int?
+  q50             Int?
+  q51             Int?
+  q52             Int?
+  q53             Int?
+  q54             Int?
+  q55             Int?
+  q56             Int?
+  q57             Int?
+  q58             Int?
+  q59             Int?
+  q60             Int?
+  q61             Int?
+  q62             Int?
+  q63             Int?
+  q64             Int?
+  q65             Int?
+  q66             Int?
+  q67             Int?
+  q68             Int?
+  q69             Int?
+  q70             Int?
+  q71             Int?
+  q72             Int?
+  q73             Int?
+  q74             Int?
+  q75             Int?
+  q76             Int?
+  q77             Int?
+  q78             Int?
+  q79             Int?
+  q80             Int?
+  q81             Int?
+  q82             Int?
+  q83             Int?
+  q84             Int?
+  q85             Int?
+  q86             Int?
+  q87             Int?
+  q88             Int?
+  q89             Int?
+  q90             Int?
   createdAt       DateTime  @default(now())
+  isDraft         Boolean   @default(false)
   updatedAt       DateTime? @updatedAt
+  student         Student   @relation(fields: [studentId], references: [id])
+}
+
+model Parent {
+  id        String           @id @default(uuid())
+  name      String
+  age       Int?
+  childName String?
+  school    String?
+  gender    String?
+  createdAt DateTime         @default(now())
+  responses FamilyResponse[]
+}
+
+model FamilyResponse {
+  id                String    @id @default(uuid())
+  parentId          String
+  isDraft           Boolean   @default(false)
+  valueScores       String?
+  higherOrderScores String?
+  centeredScores    String?
+  personalMean      Float?
+  fq1               Int?
+  fq2               Int?
+  fq3               Int?
+  fq4               Int?
+  fq5               Int?
+  fq6               Int?
+  fq7               Int?
+  fq8               Int?
+  fq9               Int?
+  fq10              Int?
+  fq11              Int?
+  fq12              Int?
+  fq13              Int?
+  fq14              Int?
+  fq15              Int?
+  fq16              Int?
+  fq17              Int?
+  fq18              Int?
+  fq19              Int?
+  fq20              Int?
+  fq21              Int?
+  fq22              Int?
+  fq23              Int?
+  fq24              Int?
+  fq25              Int?
+  fq26              Int?
+  fq27              Int?
+  fq28              Int?
+  fq29              Int?
+  fq30              Int?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime? @updatedAt
+  parent            Parent    @relation(fields: [parentId], references: [id])
 }

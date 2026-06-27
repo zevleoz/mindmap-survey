@@ -162,7 +162,7 @@ export const PRESSURE_QUESTION_IDS = Array.from({ length: 30 }, (_, i) => i + 1)
 export const TOTAL_LEARNING_QUESTIONS = 60;
 export const TOTAL_PRESSURE_QUESTIONS = 30;
 
-function shuffleArray<T>(array: T[]): T[] {
+export function shuffleArray<T>(array: T[]): T[] {
   const result = [...array];
   for (let i = result.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -532,3 +532,150 @@ export const RESULT_GROUPS = [
     ],
   },
 ];
+
+// ==================== 家长问卷数据 ====================
+
+export const FAMILY_VALUES = [
+  "自主",
+  "刺激",
+  "享乐",
+  "成就",
+  "权力",
+  "安全",
+  "遵从",
+  "传统",
+  "仁爱",
+  "普世主义",
+] as const;
+
+export type FamilyValue = (typeof FAMILY_VALUES)[number];
+
+export const FAMILY_HIGHER_ORDER = [
+  "开放变革",
+  "保守维持",
+  "自我提升",
+  "自我超越",
+] as const;
+
+export type FamilyHigherOrder = (typeof FAMILY_HIGHER_ORDER)[number];
+
+export const FAMILY_QUESTIONS: QuestionDef[] = [
+  { id: 1, text: "在几个社团、兴趣班或选修课都基本可行时，比起由家长选出看起来最有优势的一项，我更看重孩子能够根据自己的判断作出选择。" },
+  { id: 2, text: "比起同时参加很多活动，我更看重孩子能否在少数事情上投入足够精力，做到较高水平。" },
+  { id: 3, text: "在两个学校都适合孩子时，即使其中一所提供更多新课程和新活动，我也会优先选择管理更稳定、日常安排更明确的学校。" },
+  { id: 4, text: "即使不能直接提高成绩或升学优势，我仍认为孩子接触不同文化、家庭背景和观点是有价值的。" },
+  { id: 5, text: "即使一项课程、艺术、运动或创作兴趣暂时不能提高成绩、获得奖项或帮助升学，只要孩子持续喜欢，我仍认为值得为它保留时间。" },
+  { id: 6, text: "孩子已经主动报名一项活动或答应承担一项任务后，即使后来兴趣下降，我仍更看重他是否履行原先的承诺。" },
+  { id: 7, text: "在几个活动都适合孩子时，我会更看重其中是否有机会让他承担负责人角色、组织他人或影响团队决策。" },
+  { id: 8, text: "在熟悉的活动和从未接触过的新领域之间，即使短期内不一定有成果，我仍更看重孩子获得新的体验。" },
+  { id: 9, text: "即使会占用一部分学习或活动时间，我仍认为孩子应该为陪伴家人和维护重要友谊保留时间。" },
+  { id: 10, text: "当孩子喜欢的选择与我们家庭一直坚持的做事原则发生冲突时，我更看重是否守住家庭原则，而不只是孩子当下是否喜欢。" },
+  { id: 11, text: "制定学习目标时，比起目标是否完全符合成人安排，我更看重孩子能否说清楚自己为什么要做、希望做到什么。" },
+  { id: 12, text: "当孩子已经达到基本要求时，比起就此停止，我更看重他是否愿意把质量和水平再提高一步。" },
+  { id: 13, text: "如果两个课程、学校或发展方向都适合孩子，我会优先考虑未来路径更清楚、风险更可控的那个。" },
+  { id: 14, text: "即使不能带来成绩、升学或其他个人回报，我仍认为孩子把时间用于公益、环保或帮助更广泛的人群是有价值的。" },
+  { id: 15, text: "在两个学校、课程或活动都适合孩子时，比起能增加更多成绩或履历优势的那个，我更看重孩子日常是否感到充实和愉快。" },
+  { id: 16, text: "在班级、社团或其他集体中，即使某项规则会让孩子觉得麻烦，只要这项规则对所有人都适用，我仍认为孩子应该遵守。" },
+  { id: 17, text: "在其他条件相近时，我会优先考虑声誉更高、资源更集中、能够带来更多发展机会的学校或平台。" },
+  { id: 18, text: "即使可能失败，我仍认为孩子应该尝试一些有挑战、没有十足把握的事情。" },
+  { id: 19, text: "即使会因此少获得一次竞争优势，我仍认为孩子不应以破坏同学或朋友之间的信任为代价。" },
+  { id: 20, text: "即使孩子未来生活在不同城市或国家，我仍认为家庭和文化中长期保留的节日、礼仪和习惯值得延续。" },
+  { id: 21, text: "当孩子提出与家长期待不同的选择时，只要他能够说明自己的理由，我仍认为他的独立判断值得被认真对待。" },
+  { id: 22, text: "评价孩子的一项学习或活动经历时，比起“参加过”或“完成过”，我更看重他是否做出了有质量、能够体现能力的成果。" },
+  { id: 23, text: "在两个职业方向都适合孩子时，比起收入可能更高但变化和风险也更大的方向，我会优先考虑收入更稳定、发展路径更清楚的方向。" },
+  { id: 24, text: "当一个选择能让孩子获得更多好处，但会明显影响不熟悉的人，或占用他人本应获得的机会时，我仍会把公平和对他人的影响放在重要位置。" },
+  { id: 25, text: "即使学习任务很多，我仍认为孩子应该保留一些时间，做纯粹因为喜欢、而不是为了成绩或升学的事情。" },
+  { id: 26, text: "孩子与家长已经共同约定了学习、手机或作息规则后，即使执行起来暂时有些不方便，我仍认为孩子应该按约定执行。" },
+  { id: 27, text: "在两个职业方向都适合孩子时，即使其中一个竞争更激烈、生活压力也更大，只要它能带来更高收入和更多发展机会，我仍会更优先考虑这个方向。" },
+  { id: 28, text: "即使熟悉的选择更加轻松，我仍认为去陌生环境参加营地、交流或项目的经历很有价值。" },
+  { id: 29, text: "当家人或好朋友真正需要帮助时，即使会影响自己的安排，我仍认为孩子应该拿出时间和精力给予支持。" },
+  { id: 30, text: "即使孩子不选择与父母相同的道路，我仍认为他的未来发展应与家庭长期重视的价值和责任保持一定联系。" },
+];
+
+export const FAMILY_VALUE_DIMENSIONS: Record<FamilyValue, number[]> = {
+  自主: [1, 11, 21],
+  刺激: [8, 18, 28],
+  享乐: [5, 15, 25],
+  成就: [2, 12, 22],
+  权力: [7, 17, 27],
+  安全: [3, 13, 23],
+  遵从: [6, 16, 26],
+  传统: [10, 20, 30],
+  仁爱: [9, 19, 29],
+  普世主义: [4, 14, 24],
+};
+
+export const FAMILY_HIGHER_ORDER_DIMENSIONS: Record<FamilyHigherOrder, FamilyValue[]> = {
+  开放变革: ["自主", "刺激", "享乐"],
+  保守维持: ["安全", "遵从", "传统"],
+  自我提升: ["成就", "权力"],
+  自我超越: ["仁爱", "普世主义"],
+};
+
+export const FAMILY_QUESTION_IDS = Array.from({ length: 30 }, (_, i) => i + 1);
+export const TOTAL_FAMILY_QUESTIONS = 30;
+export const FAMILY_PAGE_SIZE = 10;
+
+export interface FamilyScores {
+  valueScores: Record<FamilyValue, number>;
+  higherOrderScores: Record<FamilyHigherOrder, number>;
+  centeredScores: Record<FamilyValue, number>;
+  personalMean: number;
+}
+
+export function calculateFamilyScores(answers: Record<string, number>): FamilyScores {
+  const rawScores: Record<string, number> = {};
+  for (let i = 1; i <= 30; i++) {
+    rawScores[String(i)] = answers[String(i)] ?? 0;
+  }
+
+  const personalMean = (() => {
+    let sum = 0;
+    let count = 0;
+    for (let i = 1; i <= 30; i++) {
+      const v = rawScores[String(i)];
+      if (v > 0) {
+        sum += v;
+        count++;
+      }
+    }
+    return count > 0 ? sum / count : 0;
+  })();
+
+  const valueScores = {} as Record<FamilyValue, number>;
+  for (const value of FAMILY_VALUES) {
+    const qIds = FAMILY_VALUE_DIMENSIONS[value];
+    let sum = 0;
+    let count = 0;
+    for (const qId of qIds) {
+      const v = rawScores[String(qId)];
+      if (v > 0) {
+        sum += v;
+        count++;
+      }
+    }
+    valueScores[value] = count > 0 ? Math.round((sum / count) * 10) / 10 : 0;
+  }
+
+  const centeredScores = {} as Record<FamilyValue, number>;
+  for (const value of FAMILY_VALUES) {
+    centeredScores[value] = Math.round((valueScores[value] - personalMean) * 100) / 100;
+  }
+
+  const higherOrderScores = {} as Record<FamilyHigherOrder, number>;
+  for (const order of FAMILY_HIGHER_ORDER) {
+    const values = FAMILY_HIGHER_ORDER_DIMENSIONS[order];
+    let sum = 0;
+    for (const value of values) {
+      sum += centeredScores[value];
+    }
+    higherOrderScores[order] = Math.round(sum / values.length * 100) / 100;
+  }
+
+  return {
+    valueScores,
+    higherOrderScores,
+    centeredScores,
+    personalMean: Math.round(personalMean * 10) / 10,
+  };
+}
