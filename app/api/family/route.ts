@@ -42,49 +42,25 @@ export async function GET() {
   try {
     const usable = await isDatabaseUsable();
     if (!usable) {
-      return NextResponse.json(
-        {
-          records: [],
-          _dbFallback: true,
-          _message: "数据库尚未配置。",
-        },
-        { status: 200 }
-      );
+      return NextResponse.json({ records: [] }, { status: 200 });
     }
 
-    let responses: any[];
-    try {
-      responses = await prisma.familyResponse.findMany({
-        include: { parent: true },
-        orderBy: { createdAt: "desc" },
-      }) as any[];
-    } catch {
-      responses = await prisma.$queryRaw`SELECT r.id, r.parentId, r.createdAt, r.isDraft, r.personalMean, r.fq1, r.fq2, r.fq3, r.fq4, r.fq5, r.fq6, r.fq7, r.fq8, r.fq9, r.fq10, r.fq11, r.fq12, r.fq13, r.fq14, r.fq15, r.fq16, r.fq17, r.fq18, r.fq19, r.fq20, r.fq21, r.fq22, r.fq23, r.fq24, r.fq25, r.fq26, r.fq27, r.fq28, r.fq29, r.fq30, p.name, p.childName, p.school, p.grade FROM "FamilyResponse" r JOIN "Parent" p ON r."parentId" = p.id ORDER BY r."createdAt" DESC` as any[];
-    }
+    const responses = await prisma.familyResponse.findMany({
+      include: { parent: true },
+      orderBy: { createdAt: "desc" },
+    });
 
-    const records = responses.map((r: any) => {
+    const records = responses.map((r) => {
       const raw: Record<string, number | undefined> = {};
       for (let i = 1; i <= 30; i++) {
-        const key = `fq${i}`;
+        const key = `fq${i}` as keyof typeof r;
         const v = r[key];
         if (typeof v === "number") raw[key] = v;
       }
 
-      let valueScores: Record<string, number> = {};
-      let higherOrderScores: Record<string, number> = {};
-      let higherOrderRawScores: Record<string, number> = {};
-      let centeredScores: Record<string, number> = {};
-      let personalMean = r.personalMean ?? 0;
-
-      const parsedValues = safeParseJSON<Record<string, number>>(r.valueScores);
-      const parsedHigher = safeParseJSON<Record<string, number>>(r.higherOrderScores);
-      const parsedCentered = safeParseJSON<Record<string, number>>(r.centeredScores);
-
-      if (parsedValues && Object.keys(parsedValues).length > 0 && parsedHigher && Object.keys(parsedHigher).length > 0 && parsedCentered && Object.keys(parsedCentered).length > 0) {
-        valueScores = parsedValues;
-        higherOrderScores = parsedHigher;
-        centeredScores = parsedCentered;
-      } 
+      const valueScores = safeParseJSON<Record<string, number>>(r.valueScores) ?? {};
+      const higherOrderScores = safeParseJSON<Record<string, number>>(r.higherOrderScores) ?? {};
+      const centeredScores = safeParseJSON<Record<string, number>>(r.centeredScores) ?? {};
 
       const answers: Record<string, number> = {};
       for (let i = 1; i <= 30; i++) {
@@ -93,30 +69,21 @@ export async function GET() {
         if (typeof v === "number") answers[String(i)] = v;
       }
       const scores = calculateFamilyScores(answers);
-      higherOrderRawScores = scores.higherOrderRawScores as Record<string, number>;
-      if (!parsedValues || Object.keys(parsedValues).length === 0) {
-        valueScores = scores.valueScores as Record<string, number>;
-        higherOrderScores = scores.higherOrderScores as Record<string, number>;
-        centeredScores = scores.centeredScores as Record<string, number>;
-        personalMean = scores.personalMean;
-      }
-
-      const parent = r.parent ?? r;
-      const createdAt = r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt);
+      const higherOrderRawScores = scores.higherOrderRawScores as Record<string, number>;
 
       return {
         id: r.id,
-        name: parent.name,
-        childName: parent.childName,
-        school: parent.school,
-        grade: parent.grade,
-        createdAt,
+        name: r.parent.name,
+        childName: r.parent.childName,
+        school: r.parent.school,
+        grade: r.parent.grade,
+        createdAt: r.createdAt.toISOString(),
         answers: raw,
-        valueScores,
-        higherOrderScores,
+        valueScores: Object.keys(valueScores).length > 0 ? valueScores : scores.valueScores as Record<string, number>,
+        higherOrderScores: Object.keys(higherOrderScores).length > 0 ? higherOrderScores : scores.higherOrderScores as Record<string, number>,
         higherOrderRawScores,
-        centeredScores,
-        personalMean,
+        centeredScores: Object.keys(centeredScores).length > 0 ? centeredScores : scores.centeredScores as Record<string, number>,
+        personalMean: r.personalMean ?? scores.personalMean,
       };
     });
 
