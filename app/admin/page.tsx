@@ -49,9 +49,10 @@ interface CriticalAnswer {
 interface NormalizedRecord {
   id: string;
   name: string;
-  age: number | null;
+  age?: number | null;
   school: string | null;
-  gender: string | null;
+  gender?: string | null;
+  grade?: string | null;
   childName?: string | null;
   createdAt: string;
   isDraft?: boolean;
@@ -173,6 +174,7 @@ function normalize(raw: unknown, type: SurveyType): NormalizedRecord | null {
     age: typeof obj.age === "number" ? obj.age : null,
     school: typeof obj.school === "string" ? obj.school : null,
     gender: typeof obj.gender === "string" ? obj.gender : null,
+    grade: typeof obj.grade === "string" ? obj.grade : null,
     childName: typeof obj.childName === "string" ? obj.childName : null,
     createdAt: typeof obj.createdAt === "string" ? obj.createdAt : new Date().toISOString(),
     isDraft: obj.isDraft === true,
@@ -562,7 +564,7 @@ function FamilyQuickViewModal({
       title={`${record.name} · 快速查看`}
       subtitle={
         (record.school ? `${record.school} · ` : "") +
-        `${record.gender ?? "—"}${record.age ? ` · ${record.age}岁` : ""}${record.childName ? ` · 孩子：${record.childName}` : ""} · 提交时间 ${formatDate(record.createdAt)}`
+        `${record.grade ?? "—"}${record.childName ? ` · 孩子：${record.childName}` : ""} · 提交时间 ${formatDate(record.createdAt)}`
       }
       onClose={onClose}
     >
@@ -849,6 +851,7 @@ export default function AdminPage() {
           r.name.toLowerCase().includes(q) ||
           (r.school && r.school.toLowerCase().includes(q)) ||
           (r.gender && String(r.gender).toLowerCase().includes(q)) ||
+          (r.grade && String(r.grade).toLowerCase().includes(q)) ||
           (r.childName && r.childName.toLowerCase().includes(q))
       )
     : records;

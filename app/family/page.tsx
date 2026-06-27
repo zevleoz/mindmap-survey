@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, User, Users } from "lucide-react";
+import { User, BookOpen } from "lucide-react";
 
 import type { FamilyScores } from "@/lib/survey-data";
 import {
@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 type Step = "landing" | "info" | "questions" | "submitted";
 type NetStatus = "online" | "slow" | "offline";
 
-const GENDER_OPTIONS = ["男", "女", "其他", "不愿透露"];
+const GRADE_OPTIONS = ["G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", "G9", "G10", "G11", "G12"];
 
 const LS_ANSWERS = "p4learning_family_answers";
 const LS_PARENT = "p4learning_family_parent";
@@ -27,10 +27,9 @@ interface PersistedAnswers {
   pageIndex: number;
   answers: Record<string, number>;
   name: string;
-  age: string;
   childName: string;
   school: string;
-  gender: string;
+  grade: string;
   savedAt: number;
   version: number;
 }
@@ -489,10 +488,9 @@ function BottomNav({
 export default function FamilySurveyPage() {
   const [step, setStep] = useState<Step>("landing");
   const [name, setName] = useState("");
-  const [age, setAge] = useState("");
   const [childName, setChildName] = useState("");
   const [school, setSchool] = useState("");
-  const [gender, setGender] = useState("");
+  const [grade, setGrade] = useState("");
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [scores, setScores] = useState<FamilyScores | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -519,10 +517,9 @@ export default function FamilySurveyPage() {
 
     if (loaded) {
       setName(loaded.name ?? "");
-      setAge(loaded.age ?? "");
       setChildName(loaded.childName ?? "");
       setSchool(loaded.school ?? "");
-      setGender(loaded.gender ?? "");
+      setGrade(loaded.grade ?? "");
       setAnswers(loaded.answers ?? {});
       if (typeof loaded.pageIndex === "number") {
         setPageIndex(loaded.pageIndex);
@@ -557,10 +554,9 @@ export default function FamilySurveyPage() {
         pageIndex,
         answers,
         name,
-        age,
         childName,
         school,
-        gender,
+        grade,
         savedAt: Date.now(),
         version: PERSIST_VERSION,
       };
@@ -572,7 +568,7 @@ export default function FamilySurveyPage() {
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
       debounceRef.current = window.setTimeout(write, 500);
     },
-    [step, pageIndex, answers, name, age, childName, school, gender]
+    [step, pageIndex, answers, name, childName, school, grade]
   );
 
   useEffect(() => {
@@ -584,7 +580,7 @@ export default function FamilySurveyPage() {
   const handleConfirmInfo = useCallback(() => {
     const trimmed = name.trim();
     if (trimmed.length === 0) {
-      setSubmitError("请填写姓名");
+      setSubmitError("请填写家长称呼");
       return;
     }
     setSubmitError("");
@@ -602,10 +598,9 @@ export default function FamilySurveyPage() {
               parentId: parentId || ("temp-" + Date.now().toString(36)),
               parentInfo: {
                 name: trimmed,
-                age: age ? Number(age) : null,
                 childName: childName.trim() || null,
                 school: school.trim() || null,
-                gender: gender || null,
+                grade: grade || null,
               },
             }),
           },
@@ -630,7 +625,7 @@ export default function FamilySurveyPage() {
 
     setStep("questions");
     window.scrollTo({ top: 0, left: 0 });
-  }, [name, age, childName, school, gender, persistCurrent, parentId]);
+  }, [name, childName, school, grade, persistCurrent, parentId]);
 
   const handleAnswer = useCallback((questionId: number, value: number) => {
     setAnswers((prev) => ({ ...prev, [String(questionId)]: value }));
@@ -652,10 +647,9 @@ export default function FamilySurveyPage() {
           parentId,
           parentInfo: {
             name: name.trim(),
-            age: age ? Number(age) : null,
             childName: childName.trim() || null,
             school: school.trim() || null,
-            gender: gender || null,
+            grade: grade || null,
           },
           pageIndex: pageIdx,
           answers: pageAnswers,
@@ -675,7 +669,7 @@ export default function FamilySurveyPage() {
         console.warn("[family] auto-save skipped:", err);
       }
     },
-    [parentId, pages, answers, name, age, childName, school, gender]
+    [parentId, pages, answers, name, childName, school, grade]
   );
 
   const handleNextPage = useCallback(() => {
@@ -695,10 +689,9 @@ export default function FamilySurveyPage() {
     clearPersisted();
     setStep("landing");
     setName("");
-    setAge("");
     setChildName("");
     setSchool("");
-    setGender("");
+    setGrade("");
     setAnswers({});
     setScores(null);
     setParentId(null);
@@ -718,10 +711,9 @@ export default function FamilySurveyPage() {
 
     const finalParentInfo = {
       name: name.trim() || "未填写",
-      age: age ? Number(age) : null,
       childName: childName.trim() || null,
       school: school.trim() || null,
-      gender: gender || null,
+      grade: grade || null,
     };
 
     try {
@@ -796,7 +788,7 @@ export default function FamilySurveyPage() {
       setSubmitting(false);
       submitLockRef.current = false;
     }
-  }, [parentId, name, age, childName, school, gender, answers]);
+  }, [parentId, name, childName, school, grade, answers]);
 
   const flushPending = useCallback(async () => {
     if (typeof window === "undefined") return;
@@ -867,10 +859,9 @@ export default function FamilySurveyPage() {
                 onClick={() => {
                   clearPersisted();
                   setName("");
-                  setAge("");
                   setChildName("");
                   setSchool("");
-                  setGender("");
+                  setGrade("");
                   setAnswers({});
                   setParentId(null);
                   setPageIndex(0);
@@ -952,79 +943,61 @@ export default function FamilySurveyPage() {
             <div className="mt-6 grid gap-4">
               <div className="space-y-2">
                 <label htmlFor="name" className="text-sm font-medium text-slate-700">
-                  家长姓名
+                  家长怎么称呼？
                 </label>
                 <IconInput
                   id="name"
                   icon={User}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="请输入您的姓名"
+                  placeholder="请输入您的称呼"
                   autoComplete="name"
                 />
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <label htmlFor="age" className="text-sm font-medium text-slate-700">
-                    年龄
-                  </label>
-                  <IconInput
-                    id="age"
-                    icon={User}
-                    type="number"
-                    min={18}
-                    max={99}
-                    value={age}
-                    onChange={(e) => setAge(e.target.value)}
-                    placeholder="请输入年龄"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="gender" className="text-sm font-medium text-slate-700">
-                    性别
-                  </label>
-                  <div className="relative">
-                    <Users className="pointer-events-none absolute left-3.5 top-1/2 z-10 size-4 -translate-y-1/2 text-amber-700/70" />
-                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 z-10 size-4 -translate-y-1/2 text-slate-500" />
-                    <select
-                      id="gender"
-                      value={gender}
-                      onChange={(e) => setGender(e.target.value)}
-                      className="h-12 w-full appearance-none rounded-xl border border-slate-200 bg-amber-50/40 pl-10 pr-10 text-base text-slate-800 outline-none focus:border-amber-700 focus:ring-2 focus:ring-amber-700/20"
-                    >
-                      <option value="">请选择性别</option>
-                      {GENDER_OPTIONS.map((g) => (
-                        <option key={g} value={g}>
-                          {g}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </div>
               <div className="space-y-2">
                 <label htmlFor="childName" className="text-sm font-medium text-slate-700">
-                  孩子姓名
+                  孩子怎么称呼？
                 </label>
                 <IconInput
                   id="childName"
                   icon={User}
                   value={childName}
                   onChange={(e) => setChildName(e.target.value)}
-                  placeholder="请输入孩子姓名"
+                  placeholder="请输入孩子的称呼"
                 />
               </div>
               <div className="space-y-2">
                 <label htmlFor="school" className="text-sm font-medium text-slate-700">
-                  学校名称
+                  学校
                 </label>
                 <IconInput
                   id="school"
-                  icon={User}
+                  icon={BookOpen}
                   value={school}
                   onChange={(e) => setSchool(e.target.value)}
                   placeholder="请输入学校名称"
                 />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="grade" className="text-sm font-medium text-slate-700">
+                  年级
+                </label>
+                <div className="relative">
+                  <BookOpen className="pointer-events-none absolute left-3.5 top-1/2 z-10 size-4 -translate-y-1/2 text-amber-700/70" />
+                  <select
+                    id="grade"
+                    value={grade}
+                    onChange={(e) => setGrade(e.target.value)}
+                    className="h-12 w-full appearance-none rounded-xl border border-slate-200 bg-amber-50/40 pl-10 pr-10 text-base text-slate-800 outline-none focus:border-amber-700 focus:ring-2 focus:ring-amber-700/20"
+                  >
+                    <option value="">请选择年级</option>
+                    {GRADE_OPTIONS.map((g) => (
+                      <option key={g} value={g}>
+                        {g}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
           </div>

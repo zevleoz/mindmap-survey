@@ -98,10 +98,9 @@ export async function GET() {
       return {
         id: r.id,
         name: r.parent.name,
-        age: r.parent.age,
         childName: r.parent.childName,
         school: r.parent.school,
-        gender: r.parent.gender,
+        grade: r.parent.grade,
         createdAt: r.createdAt.toISOString(),
         answers: raw,
         valueScores,
@@ -124,18 +123,16 @@ export async function POST(request: Request) {
     const {
       parentId,
       name,
-      age,
       childName,
       school,
-      gender,
+      grade,
       answers,
     } = body as {
       parentId?: string | null;
       name?: string;
-      age?: number | null;
       childName?: string;
       school?: string;
-      gender?: string;
+      grade?: string;
       answers?: Record<string, number>;
     };
 
@@ -184,10 +181,9 @@ export async function POST(request: Request) {
           data: {
             id: parentId,
             name: name?.trim() || "未填写",
-            age: typeof age === "number" && !Number.isNaN(age) ? age : null,
             childName: childName?.trim() || null,
             school: school?.trim() || null,
-            gender: gender?.trim() || null,
+            grade: grade?.trim() || null,
           },
         });
         finalParentId = created.id;
@@ -196,10 +192,9 @@ export async function POST(request: Request) {
           where: { id: parentId },
           data: {
             name: name?.trim() || undefined,
-            age: typeof age === "number" && !Number.isNaN(age) ? age : undefined,
             childName: childName?.trim() || undefined,
             school: school?.trim() || undefined,
-            gender: gender?.trim() || undefined,
+            grade: grade?.trim() || undefined,
           },
         });
       }
@@ -207,10 +202,9 @@ export async function POST(request: Request) {
       const created = await prisma.parent.create({
         data: {
           name: name?.trim() || "未填写",
-          age: typeof age === "number" && !Number.isNaN(age) ? age : null,
           childName: childName?.trim() || null,
           school: school?.trim() || null,
-          gender: gender?.trim() || null,
+          grade: grade?.trim() || null,
         },
       });
       finalParentId = created.id;
@@ -270,7 +264,7 @@ export async function PATCH(request: Request) {
       pageIndex,
     } = body as {
       parentId?: string | null;
-      parentInfo?: { name?: string; age?: number | null; childName?: string; school?: string; gender?: string } | null;
+      parentInfo?: { name?: string; childName?: string; school?: string; grade?: string } | null;
       answers?: Record<string, number> | null;
       pageIndex?: number | null;
     };
@@ -298,10 +292,9 @@ export async function PATCH(request: Request) {
       const parent = await prisma.parent.create({
         data: {
           name: parentInfo?.name?.trim() || "未填写",
-          age: typeof parentInfo?.age === "number" && !Number.isNaN(parentInfo.age) ? parentInfo.age : null,
           childName: parentInfo?.childName?.trim() || null,
           school: parentInfo?.school?.trim() || null,
-          gender: parentInfo?.gender?.trim() || null,
+          grade: parentInfo?.grade?.trim() || null,
         },
       });
       finalParentId = parent.id;
@@ -317,10 +310,9 @@ export async function PATCH(request: Request) {
             where: { id: parentId },
             data: {
               name: parentInfo.name?.trim() || undefined,
-              age: typeof parentInfo.age === "number" && !Number.isNaN(parentInfo.age) ? parentInfo.age : undefined,
               childName: parentInfo.childName?.trim() || undefined,
               school: parentInfo.school?.trim() || undefined,
-              gender: parentInfo.gender?.trim() || undefined,
+              grade: parentInfo.grade?.trim() || undefined,
             },
           });
         }
@@ -329,10 +321,9 @@ export async function PATCH(request: Request) {
           data: {
             id: parentId,
             name: parentInfo?.name?.trim() || "未填写",
-            age: typeof parentInfo?.age === "number" && !Number.isNaN(parentInfo.age) ? parentInfo.age : null,
             childName: parentInfo?.childName?.trim() || null,
             school: parentInfo?.school?.trim() || null,
-            gender: parentInfo?.gender?.trim() || null,
+            grade: parentInfo?.grade?.trim() || null,
           },
         });
         finalParentId = parent.id;
