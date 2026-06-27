@@ -78,33 +78,27 @@ export async function GET() {
 
       const parsedValues = safeParseJSON<Record<string, number>>(r.valueScores);
       const parsedHigher = safeParseJSON<Record<string, number>>(r.higherOrderScores);
-      const parsedHigherRaw = safeParseJSON<Record<string, number>>(r.higherOrderRawScores);
       const parsedCentered = safeParseJSON<Record<string, number>>(r.centeredScores);
 
-      if (parsedValues && Object.keys(parsedValues).length > 0) {
+      if (parsedValues && Object.keys(parsedValues).length > 0 && parsedHigher && Object.keys(parsedHigher).length > 0 && parsedCentered && Object.keys(parsedCentered).length > 0) {
         valueScores = parsedValues;
-      } else {
-        const answers: Record<string, number> = {};
-        for (let i = 1; i <= 30; i++) {
-          const key = `fq${i}`;
-          const v = raw[key];
-          if (typeof v === "number") answers[String(i)] = v;
-        }
-        const scores = calculateFamilyScores(answers);
+        higherOrderScores = parsedHigher;
+        centeredScores = parsedCentered;
+      } 
+
+      const answers: Record<string, number> = {};
+      for (let i = 1; i <= 30; i++) {
+        const key = `fq${i}`;
+        const v = raw[key];
+        if (typeof v === "number") answers[String(i)] = v;
+      }
+      const scores = calculateFamilyScores(answers);
+      higherOrderRawScores = scores.higherOrderRawScores as Record<string, number>;
+      if (!parsedValues || Object.keys(parsedValues).length === 0) {
         valueScores = scores.valueScores as Record<string, number>;
         higherOrderScores = scores.higherOrderScores as Record<string, number>;
-        higherOrderRawScores = scores.higherOrderRawScores as Record<string, number>;
         centeredScores = scores.centeredScores as Record<string, number>;
         personalMean = scores.personalMean;
-      }
-      if (parsedHigher && Object.keys(parsedHigher).length > 0) {
-        higherOrderScores = parsedHigher;
-      }
-      if (parsedHigherRaw && Object.keys(parsedHigherRaw).length > 0) {
-        higherOrderRawScores = parsedHigherRaw;
-      }
-      if (parsedCentered && Object.keys(parsedCentered).length > 0) {
-        centeredScores = parsedCentered;
       }
 
       const parent = r.parent ?? r;
@@ -239,7 +233,6 @@ export async function POST(request: Request) {
           isDraft: false,
           valueScores: JSON.stringify(scores.valueScores),
           higherOrderScores: JSON.stringify(scores.higherOrderScores),
-          higherOrderRawScores: JSON.stringify(scores.higherOrderRawScores),
           centeredScores: JSON.stringify(scores.centeredScores),
           personalMean: scores.personalMean,
           ...columns,
@@ -253,7 +246,6 @@ export async function POST(request: Request) {
           isDraft: false,
           valueScores: JSON.stringify(scores.valueScores),
           higherOrderScores: JSON.stringify(scores.higherOrderScores),
-          higherOrderRawScores: JSON.stringify(scores.higherOrderRawScores),
           centeredScores: JSON.stringify(scores.centeredScores),
           personalMean: scores.personalMean,
           ...columns,
