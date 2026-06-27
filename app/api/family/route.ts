@@ -52,15 +52,20 @@ export async function GET() {
       );
     }
 
-    const responses = await prisma.familyResponse.findMany({
-      include: { parent: true },
-      orderBy: { createdAt: "desc" },
-    });
+    let responses: any[];
+    try {
+      responses = await prisma.familyResponse.findMany({
+        include: { parent: true },
+        orderBy: { createdAt: "desc" },
+      }) as any[];
+    } catch {
+      responses = await prisma.$queryRaw`SELECT r.id, r.parentId, r.createdAt, r.isDraft, r.personalMean, r.fq1, r.fq2, r.fq3, r.fq4, r.fq5, r.fq6, r.fq7, r.fq8, r.fq9, r.fq10, r.fq11, r.fq12, r.fq13, r.fq14, r.fq15, r.fq16, r.fq17, r.fq18, r.fq19, r.fq20, r.fq21, r.fq22, r.fq23, r.fq24, r.fq25, r.fq26, r.fq27, r.fq28, r.fq29, r.fq30, p.name, p.childName, p.school, p.grade FROM "FamilyResponse" r JOIN "Parent" p ON r."parentId" = p.id ORDER BY r."createdAt" DESC` as any[];
+    }
 
-    const records = responses.map((r) => {
+    const records = responses.map((r: any) => {
       const raw: Record<string, number | undefined> = {};
       for (let i = 1; i <= 30; i++) {
-        const key = `fq${i}` as keyof typeof r;
+        const key = `fq${i}`;
         const v = r[key];
         if (typeof v === "number") raw[key] = v;
       }
@@ -81,7 +86,8 @@ export async function GET() {
       } else {
         const answers: Record<string, number> = {};
         for (let i = 1; i <= 30; i++) {
-          const v = raw[`fq${i}`];
+          const key = `fq${i}`;
+          const v = raw[key];
           if (typeof v === "number") answers[String(i)] = v;
         }
         const scores = calculateFamilyScores(answers);
@@ -101,13 +107,16 @@ export async function GET() {
         centeredScores = parsedCentered;
       }
 
+      const parent = r.parent ?? r;
+      const createdAt = r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt);
+
       return {
         id: r.id,
-        name: r.parent.name,
-        childName: r.parent.childName,
-        school: r.parent.school,
-        grade: r.parent.grade,
-        createdAt: r.createdAt.toISOString(),
+        name: parent.name,
+        childName: parent.childName,
+        school: parent.school,
+        grade: parent.grade,
+        createdAt,
         answers: raw,
         valueScores,
         higherOrderScores,
