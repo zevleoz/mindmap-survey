@@ -46,12 +46,7 @@ export async function GET() {
     }
 
     const rows = await prisma.$queryRaw`
-      SELECT r.id, r.parentId, r.createdAt, r.isDraft, r.personalMean,
-             r.fq1, r.fq2, r.fq3, r.fq4, r.fq5, r.fq6, r.fq7, r.fq8, r.fq9, r.fq10,
-             r.fq11, r.fq12, r.fq13, r.fq14, r.fq15, r.fq16, r.fq17, r.fq18, r.fq19, r.fq20,
-             r.fq21, r.fq22, r.fq23, r.fq24, r.fq25, r.fq26, r.fq27, r.fq28, r.fq29, r.fq30,
-             r."valueScores", r."higherOrderScores", r."centeredScores",
-             p.name, p."childName", p.school, p.grade, p.age, p.gender
+      SELECT r.*, p.name, p."childName", p.school
       FROM "FamilyResponse" r
       JOIN "Parent" p ON r."parentId" = p.id
       ORDER BY r."createdAt" DESC
@@ -83,9 +78,7 @@ export async function GET() {
         name: r.name,
         childName: r.childName,
         school: r.school,
-        grade: r.grade,
-        age: r.age,
-        gender: r.gender,
+        grade: r.grade ?? "",
         createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
         answers: raw,
         valueScores: Object.keys(valueScores).length > 0 ? valueScores : scores.valueScores as Record<string, number>,
