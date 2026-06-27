@@ -122,8 +122,10 @@ model Response {
 model Parent {
   id        String           @id @default(uuid())
   name      String
+  age       Int?
   childName String?
   school    String?
+  gender    String?
   grade     String?
   createdAt DateTime         @default(now())
   responses FamilyResponse[]

@@ -116,8 +116,10 @@ CREATE TABLE IF NOT EXISTS "Response" (
 CREATE TABLE IF NOT EXISTS "Parent" (
     "id" UUID NOT NULL,
     "name" TEXT NOT NULL,
+    "age" INTEGER,
     "childName" TEXT,
     "school" TEXT,
+    "gender" TEXT,
     "grade" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "Parent_pkey" PRIMARY KEY ("id")

@@ -897,7 +897,7 @@ export default function AdminPage() {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={`搜索（姓名 / 学校 / ${surveyType === "family" ? "孩子姓名" : "性别"}）`}
+              placeholder={`搜索（姓名 / 学校 / ${surveyType === "family" ? "孩子姓名 / 年级" : "性别"}）`}
               className="h-11 w-full rounded-xl border border-slate-200 bg-amber-50/40 px-4 text-sm text-slate-800 outline-none focus:border-amber-700 focus:ring-2 focus:ring-amber-700/20 sm:w-64"
             />
             <button type="button" onClick={handleLogout} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-amber-200 px-4 text-sm font-medium text-amber-800 transition hover:bg-amber-50">
@@ -923,9 +923,10 @@ export default function AdminPage() {
                   <tr className="bg-amber-50/70 text-left text-sm text-amber-800">
                     <th className="px-4 py-3 font-semibold sm:px-5">姓名</th>
                     {surveyType === "family" && <th className="px-4 py-3 font-semibold sm:px-5">孩子姓名</th>}
-                    <th className="px-4 py-3 font-semibold sm:px-5">年龄</th>
+                    {surveyType === "family" && <th className="px-4 py-3 font-semibold sm:px-5">年级</th>}
+                    {surveyType === "student" && <th className="px-4 py-3 font-semibold sm:px-5">年龄</th>}
                     <th className="px-4 py-3 font-semibold sm:px-5">学校</th>
-                    <th className="px-4 py-3 font-semibold sm:px-5">性别</th>
+                    {surveyType === "student" && <th className="px-4 py-3 font-semibold sm:px-5">性别</th>}
                     <th className="px-4 py-3 font-semibold sm:px-5">提交时间</th>
                     <th className="px-4 py-3 text-right font-semibold sm:px-5">操作</th>
                   </tr>
@@ -952,9 +953,12 @@ export default function AdminPage() {
                       {surveyType === "family" && (
                         <td className="px-4 py-4 text-slate-600 sm:px-5">{r.childName ?? "—"}</td>
                       )}
-                      <td className="px-4 py-4 sm:px-5">{r.age ?? "—"}</td>
+                      {surveyType === "family" && (
+                        <td className="px-4 py-4 text-slate-600 sm:px-5">{r.grade ?? "—"}</td>
+                      )}
+                      {surveyType === "student" && <td className="px-4 py-4 sm:px-5">{r.age ?? "—"}</td>}
                       <td className="max-w-[220px] truncate px-4 py-4 text-slate-600 sm:px-5">{r.school ?? "—"}</td>
-                      <td className="px-4 py-4 sm:px-5">{r.gender ?? "—"}</td>
+                      {surveyType === "student" && <td className="px-4 py-4 sm:px-5">{r.gender ?? "—"}</td>}
                       <td className="px-4 py-4 text-slate-500 sm:px-5">{formatDate(r.createdAt)}</td>
                       <td className="px-4 py-4 sm:px-5">
                         <div className="flex flex-wrap justify-end gap-2">
