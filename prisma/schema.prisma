@@ -135,10 +135,11 @@ model FamilyResponse {
   id                String    @id @default(uuid())
   parentId          String
   isDraft           Boolean   @default(false)
-  valueScores       String?
-  higherOrderScores String?
-  centeredScores    String?
-  personalMean      Float?
+  valueScores          String?
+  higherOrderScores    String?
+  higherOrderRawScores String?
+  centeredScores       String?
+  personalMean         Float?
   fq1               Int?
   fq2               Int?
   fq3               Int?

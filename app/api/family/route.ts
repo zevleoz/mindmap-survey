@@ -67,11 +67,13 @@ export async function GET() {
 
       let valueScores: Record<string, number> = {};
       let higherOrderScores: Record<string, number> = {};
+      let higherOrderRawScores: Record<string, number> = {};
       let centeredScores: Record<string, number> = {};
       let personalMean = r.personalMean ?? 0;
 
       const parsedValues = safeParseJSON<Record<string, number>>(r.valueScores);
       const parsedHigher = safeParseJSON<Record<string, number>>(r.higherOrderScores);
+      const parsedHigherRaw = safeParseJSON<Record<string, number>>(r.higherOrderRawScores);
       const parsedCentered = safeParseJSON<Record<string, number>>(r.centeredScores);
 
       if (parsedValues && Object.keys(parsedValues).length > 0) {
@@ -85,11 +87,15 @@ export async function GET() {
         const scores = calculateFamilyScores(answers);
         valueScores = scores.valueScores as Record<string, number>;
         higherOrderScores = scores.higherOrderScores as Record<string, number>;
+        higherOrderRawScores = scores.higherOrderRawScores as Record<string, number>;
         centeredScores = scores.centeredScores as Record<string, number>;
         personalMean = scores.personalMean;
       }
       if (parsedHigher && Object.keys(parsedHigher).length > 0) {
         higherOrderScores = parsedHigher;
+      }
+      if (parsedHigherRaw && Object.keys(parsedHigherRaw).length > 0) {
+        higherOrderRawScores = parsedHigherRaw;
       }
       if (parsedCentered && Object.keys(parsedCentered).length > 0) {
         centeredScores = parsedCentered;
@@ -105,6 +111,7 @@ export async function GET() {
         answers: raw,
         valueScores,
         higherOrderScores,
+        higherOrderRawScores,
         centeredScores,
         personalMean,
       };
@@ -223,6 +230,7 @@ export async function POST(request: Request) {
           isDraft: false,
           valueScores: JSON.stringify(scores.valueScores),
           higherOrderScores: JSON.stringify(scores.higherOrderScores),
+          higherOrderRawScores: JSON.stringify(scores.higherOrderRawScores),
           centeredScores: JSON.stringify(scores.centeredScores),
           personalMean: scores.personalMean,
           ...columns,
@@ -236,6 +244,7 @@ export async function POST(request: Request) {
           isDraft: false,
           valueScores: JSON.stringify(scores.valueScores),
           higherOrderScores: JSON.stringify(scores.higherOrderScores),
+          higherOrderRawScores: JSON.stringify(scores.higherOrderRawScores),
           centeredScores: JSON.stringify(scores.centeredScores),
           personalMean: scores.personalMean,
           ...columns,

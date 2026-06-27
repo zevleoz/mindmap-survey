@@ -619,6 +619,7 @@ export const FAMILY_PAGE_SIZE = 10;
 export interface FamilyScores {
   valueScores: Record<FamilyValue, number>;
   higherOrderScores: Record<FamilyHigherOrder, number>;
+  higherOrderRawScores: Record<FamilyHigherOrder, number>;
   centeredScores: Record<FamilyValue, number>;
   personalMean: number;
 }
@@ -663,18 +664,23 @@ export function calculateFamilyScores(answers: Record<string, number>): FamilySc
   }
 
   const higherOrderScores = {} as Record<FamilyHigherOrder, number>;
+  const higherOrderRawScores = {} as Record<FamilyHigherOrder, number>;
   for (const order of FAMILY_HIGHER_ORDER) {
     const values = FAMILY_HIGHER_ORDER_DIMENSIONS[order];
     let sum = 0;
+    let rawSum = 0;
     for (const value of values) {
       sum += centeredScores[value];
+      rawSum += valueScores[value];
     }
     higherOrderScores[order] = Math.round(sum / values.length * 100) / 100;
+    higherOrderRawScores[order] = Math.round((rawSum / values.length) * 10) / 10;
   }
 
   return {
     valueScores,
     higherOrderScores,
+    higherOrderRawScores,
     centeredScores,
     personalMean: Math.round(personalMean * 10) / 10,
   };

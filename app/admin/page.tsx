@@ -67,6 +67,7 @@ interface NormalizedRecord {
   criticalQuestions: CriticalAnswer[];
   valueScores?: Record<string, number>;
   higherOrderScores?: Record<string, number>;
+  higherOrderRawScores?: Record<string, number>;
   centeredScores?: Record<string, number>;
   personalMean?: number;
 }
@@ -163,6 +164,11 @@ function normalize(raw: unknown, type: SurveyType): NormalizedRecord | null {
       ? (obj.higherOrderScores as Record<string, number>)
       : undefined;
 
+  const higherOrderRawScores: Record<string, number> | undefined =
+    obj.higherOrderRawScores && typeof obj.higherOrderRawScores === "object"
+      ? (obj.higherOrderRawScores as Record<string, number>)
+      : undefined;
+
   const centeredScores: Record<string, number> | undefined =
     obj.centeredScores && typeof obj.centeredScores === "object"
       ? (obj.centeredScores as Record<string, number>)
@@ -189,6 +195,7 @@ function normalize(raw: unknown, type: SurveyType): NormalizedRecord | null {
     criticalQuestions,
     valueScores,
     higherOrderScores,
+    higherOrderRawScores,
     centeredScores,
     personalMean: typeof obj.personalMean === "number" ? obj.personalMean : undefined,
   };
@@ -549,6 +556,7 @@ function FamilyQuickViewModal({
   const valueScores = record.valueScores ?? {};
   const centeredScores = record.centeredScores ?? {};
   const higherOrderScores = record.higherOrderScores ?? {};
+  const higherOrderRawScores = record.higherOrderRawScores ?? {};
   const personalMean = record.personalMean ?? 0;
 
   const getPriorityLevel = (score: number): { label: string; color: string } => {
@@ -608,59 +616,85 @@ function FamilyQuickViewModal({
 
         <div className="rounded-2xl bg-amber-50/30 p-5">
           <p className="mb-3 text-sm font-semibold text-amber-800">中心化相对优先级（原始分 - 个人总均分）</p>
-          <div className="space-y-3">
-            {FAMILY_VALUES.map((value) => {
-              const score = toNumber(centeredScores[value], 0);
-              const priority = getPriorityLevel(score);
-              const absScore = Math.abs(score);
-              const isPositive = score >= 0;
-              return (
-                <div key={value} className="flex items-center gap-3">
-                  <div className="w-16 text-sm font-medium text-slate-800">{value}</div>
-                  <div className="flex-1 h-6 rounded-lg bg-slate-100 overflow-hidden">
-                    <div
-                      className={`h-full transition-all duration-500 ${isPositive ? "bg-amber-700" : "bg-rose-500"}`}
-                      style={{
-                        width: `${Math.min(100, absScore * 100)}%`,
-                        marginLeft: isPositive ? 0 : `calc(${100 - Math.min(100, absScore * 100)}%)`,
-                      }}
-                    />
+          <div className="relative">
+            <div className="absolute left-[88px] right-[120px] top-0 bottom-0 flex items-center">
+              <div className="relative h-full w-full">
+                <div className="absolute left-1/2 top-0 bottom-0 w-px bg-slate-300" />
+                <div className="absolute left-0 top-0 h-full w-px bg-slate-200" />
+                <div className="absolute right-0 top-0 h-full w-px bg-slate-200" />
+              </div>
+            </div>
+            <div className="space-y-2.5 relative z-10">
+              {FAMILY_VALUES.map((value) => {
+                const score = toNumber(centeredScores[value], 0);
+                const priority = getPriorityLevel(score);
+                const absScore = Math.abs(score);
+                const isPositive = score >= 0;
+                const barPercent = Math.min(100, absScore * 50);
+                return (
+                  <div key={value} className="flex items-center gap-3">
+                    <div className="w-[80px] shrink-0 text-sm font-medium text-slate-800 text-right">{value}</div>
+                    <div className="flex-1 h-6 relative">
+                      <div className="absolute inset-0 flex">
+                        <div className="flex-1 flex justify-end">
+                          <div
+                            className={`h-full transition-all duration-500 rounded-l-lg ${!isPositive ? "bg-rose-400" : "bg-transparent"}`}
+                            style={{ width: isPositive ? "0%" : `${barPercent}%` }}
+                          />
+                        </div>
+                        <div className="w-0.5 bg-slate-400 shrink-0" />
+                        <div className="flex-1">
+                          <div
+                            className={`h-full transition-all duration-500 rounded-r-lg ${isPositive ? "bg-amber-600" : "bg-transparent"}`}
+                            style={{ width: isPositive ? `${barPercent}%` : "0%" }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="w-[52px] shrink-0 text-right">
+                      <span className={`text-sm font-bold tabular-nums ${isPositive ? "text-amber-700" : "text-rose-600"}`}>
+                        {isPositive ? "+" : ""}{score.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className={`w-[60px] shrink-0 text-center rounded-md px-1.5 py-1 text-[10px] font-medium ${priority.color}`}>
+                      {priority.label}
+                    </div>
                   </div>
-                  <div className="w-16 text-right">
-                    <span className={`text-sm font-bold tabular-nums ${isPositive ? "text-amber-700" : "text-rose-600"}`}>
-                      {isPositive ? "+" : ""}{score.toFixed(2)}
-                    </span>
-                  </div>
-                  <div className={`shrink-0 rounded-md px-2 py-1 text-[11px] font-medium ${priority.color}`}>
-                    {priority.label}
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+            <div className="flex mt-2 text-[11px] text-slate-500">
+              <div className="w-[80px] shrink-0" />
+              <div className="flex-1 flex justify-between px-1">
+                <span>-2.0</span>
+                <span>0</span>
+                <span>+2.0</span>
+              </div>
+              <div className="w-[116px] shrink-0" />
+            </div>
           </div>
         </div>
 
         <div className="rounded-2xl bg-amber-50/30 p-5">
-          <p className="mb-3 text-sm font-semibold text-amber-800">4 个高阶价值方向</p>
+          <p className="mb-3 text-sm font-semibold text-amber-800">4 个高阶价值方向（平均分）</p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {FAMILY_HIGHER_ORDER.map((order) => {
-              const score = toNumber(higherOrderScores[order], 0);
-              const isPositive = score >= 0;
+              const rawScore = toNumber(higherOrderRawScores[order] ?? higherOrderScores[order], 0);
+              const displayScore = rawScore > 6 ? rawScore / 6 : rawScore;
+              const finalScore = displayScore > 0 ? displayScore : 0;
               return (
                 <div key={order} className="rounded-xl bg-white p-4 ring-1 ring-amber-100">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium text-slate-800">{order}</span>
-                    <span className={`text-lg font-bold tabular-nums ${isPositive ? "text-amber-700" : "text-rose-600"}`}>
-                      {isPositive ? "+" : ""}{score.toFixed(2)}
+                    <span className="text-lg font-bold tabular-nums text-amber-700">
+                      {finalScore.toFixed(1)}
+                      <span className="ml-0.5 text-xs font-medium text-slate-400">/6</span>
                     </span>
                   </div>
                   <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
                     <div
-                      className={`h-full transition-all duration-500 ${isPositive ? "bg-amber-700" : "bg-rose-500"}`}
-                      style={{
-                        width: `${Math.min(100, Math.abs(score) * 100)}%`,
-                        marginLeft: isPositive ? 0 : `calc(${100 - Math.min(100, Math.abs(score) * 100)}%)`,
-                      }}
+                      className="h-full rounded-full bg-amber-600 transition-all duration-500"
+                      style={{ width: `${Math.min(100, (finalScore / 6) * 100)}%` }}
                     />
                   </div>
                 </div>
