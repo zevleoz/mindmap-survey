@@ -133,6 +133,7 @@ export async function POST(request: Request) {
       );
     }
 
+    const columns = answersToColumns(answers);
     const scores = calculateFamilyScores(answers);
     const usable = await isDatabaseUsable();
 
@@ -146,42 +147,19 @@ export async function POST(request: Request) {
       });
     }
 
-    const columns = answersToColumns(answers);
-
     let finalParentId: string;
     let responseId: string;
-    try {
-      if (parentId && !parentId.startsWith("temp-")) {
-        finalParentId = parentId;
-        const existing = await prisma.parent.findUnique({
-          where: { id: parentId },
-          select: { id: true },
-        });
-        if (!existing) {
-          const created = await prisma.parent.create({
-            data: {
-              id: parentId,
-              name: name?.trim() || "未填写",
-              childName: childName?.trim() || null,
-              school: school?.trim() || null,
-              grade: grade?.trim() || null,
-            },
-          });
-          finalParentId = created.id;
-        } else {
-          await prisma.parent.update({
-            where: { id: parentId },
-            data: {
-              name: name?.trim() || undefined,
-              childName: childName?.trim() || undefined,
-              school: school?.trim() || undefined,
-              grade: grade?.trim() || undefined,
-            },
-          });
-        }
-      } else {
+
+    if (parentId && !parentId.startsWith("temp-")) {
+      finalParentId = parentId;
+      const existing = await prisma.parent.findUnique({
+        where: { id: parentId },
+        select: { id: true },
+      });
+      if (!existing) {
         const created = await prisma.parent.create({
           data: {
+            id: parentId,
             name: name?.trim() || "未填写",
             childName: childName?.trim() || null,
             school: school?.trim() || null,
@@ -189,71 +167,60 @@ export async function POST(request: Request) {
           },
         });
         finalParentId = created.id;
-      }
-
-      const existingResponse = await prisma.familyResponse.findFirst({
-        where: { parentId: finalParentId },
-        select: { id: true },
-      });
-
-      if (existingResponse) {
-        await prisma.familyResponse.update({
-          where: { id: existingResponse.id },
-          data: {
-            isDraft: false,
-            valueScores: JSON.stringify(scores.valueScores),
-            higherOrderScores: JSON.stringify(scores.higherOrderScores),
-            centeredScores: JSON.stringify(scores.centeredScores),
-            personalMean: scores.personalMean,
-            ...columns,
-          },
-        });
-        responseId = existingResponse.id;
       } else {
-        const created = await prisma.familyResponse.create({
+        await prisma.parent.update({
+          where: { id: parentId },
           data: {
-            parentId: finalParentId,
-            isDraft: false,
-            valueScores: JSON.stringify(scores.valueScores),
-            higherOrderScores: JSON.stringify(scores.higherOrderScores),
-            centeredScores: JSON.stringify(scores.centeredScores),
-            personalMean: scores.personalMean,
-            ...columns,
+            name: name?.trim() || undefined,
+            childName: childName?.trim() || undefined,
+            school: school?.trim() || undefined,
+            grade: grade?.trim() || undefined,
           },
         });
-        responseId = created.id;
       }
-    } catch {
-      const parentResult = await prisma.$queryRaw`
-        INSERT INTO "Parent" (id, name, "childName", school, grade)
-        VALUES (gen_random_uuid(), ${name?.trim() || "未填写"}, ${childName?.trim() || null}, ${school?.trim() || null}, ${grade?.trim() || null})
-        RETURNING id
-      ` as any[];
-      finalParentId = parentResult[0].id;
+    } else {
+      const created = await prisma.parent.create({
+        data: {
+          name: name?.trim() || "未填写",
+          childName: childName?.trim() || null,
+          school: school?.trim() || null,
+          grade: grade?.trim() || null,
+        },
+      });
+      finalParentId = created.id;
+    }
 
-      const fqCols: string[] = [];
-      const fqVals: number[] = [];
-      for (let i = 1; i <= 30; i++) {
-        const key = `fq${i}`;
-        if (columns[key] !== undefined) {
-          fqCols.push(`"${key}"`);
-          fqVals.push(columns[key] as number);
-        }
-      }
+    const existingResponse = await prisma.familyResponse.findFirst({
+      where: { parentId: finalParentId },
+      select: { id: true },
+    });
 
-      const valueScoresJson = JSON.stringify(scores.valueScores);
-      const higherOrderScoresJson = JSON.stringify(scores.higherOrderScores);
-      const centeredScoresJson = JSON.stringify(scores.centeredScores);
-
-      const allCols = ["parentId", "isDraft", "valueScores", "higherOrderScores", "centeredScores", "personalMean", ...fqCols];
-      const placeholders = allCols.map((_, i) => `$${i + 1}`).join(", ");
-      const allVals = [finalParentId, false, valueScoresJson, higherOrderScoresJson, centeredScoresJson, scores.personalMean, ...fqVals];
-
-      const insertResult = await prisma.$queryRawUnsafe(
-        `INSERT INTO "FamilyResponse" (${allCols.join(", ")}) VALUES (${placeholders}) RETURNING id`,
-        ...allVals
-      ) as any[];
-      responseId = insertResult[0].id;
+    if (existingResponse) {
+      await prisma.familyResponse.update({
+        where: { id: existingResponse.id },
+        data: {
+          isDraft: false,
+          valueScores: JSON.stringify(scores.valueScores),
+          higherOrderScores: JSON.stringify(scores.higherOrderScores),
+          centeredScores: JSON.stringify(scores.centeredScores),
+          personalMean: scores.personalMean,
+          ...columns,
+        },
+      });
+      responseId = existingResponse.id;
+    } else {
+      const created = await prisma.familyResponse.create({
+        data: {
+          parentId: finalParentId,
+          isDraft: false,
+          valueScores: JSON.stringify(scores.valueScores),
+          higherOrderScores: JSON.stringify(scores.higherOrderScores),
+          centeredScores: JSON.stringify(scores.centeredScores),
+          personalMean: scores.personalMean,
+          ...columns,
+        },
+      });
+      responseId = created.id;
     }
 
     return NextResponse.json({ id: responseId, parentId: finalParentId, scores });
